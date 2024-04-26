@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">iMAPS Mobile</string>
+    <string name="portal_url">https://www.arcgis.com</string>
+    <string name="item_id">95092428774c4b1fb6a3b6f5fed9fbc4</string>
+    <string name="search_content_desc">Search</string>
+    <string name="layers_content_desc">Layers</string>
+
+</resources>
