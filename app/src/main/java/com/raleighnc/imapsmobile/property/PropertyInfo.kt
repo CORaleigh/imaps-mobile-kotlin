@@ -6,13 +6,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -29,11 +27,12 @@ fun PropertyInfo(
     selectedProperty: ArcGISFeature,
     mapViewModel: MapViewModel,
     bottomSheetState: HideableBottomSheetState,
-    navController: NavController
+    navController: NavController,
+    showServices: () -> Unit
 ) {
     val coroutineScope = rememberCoroutineScope()
 
-    val webViewUrl: MutableState<String> = remember { mutableStateOf("") }
+    // val webViewUrl: MutableState<String> = remember { mutableStateOf("") }
     Scaffold(
         topBar = {
             TopBar(
@@ -52,7 +51,9 @@ fun PropertyInfo(
                 .padding(it)
         )
         {
-            Column (modifier = Modifier.fillMaxSize().padding(30.dp)) {
+            Column(modifier = Modifier
+                .fillMaxSize()
+                .padding(30.dp)) {
                 Text(
                     text = selectedProperty.attributes["SITE_ADDRESS"]?.toString().orEmpty(),
                     style = MaterialTheme.typography.headlineMedium,
@@ -67,12 +68,20 @@ fun PropertyInfo(
                 SaleInfo(selectedProperty = selectedProperty)
                 DeedInfo(selectedProperty = selectedProperty, mapViewModel = mapViewModel)
                 BuildingInfo(selectedProperty = selectedProperty)
+                Button(
+                    onClick = {
+                        showServices()
+                    }, modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(5.dp)
+                ) {
+                    Text("Services")
+                }
                 PropertyPhotos(selectedProperty = selectedProperty, mapViewModel = mapViewModel)
+
             }
 
         }
     }
-
-
 }
 

@@ -15,6 +15,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import com.raleighnc.imapsmobile.MapViewModel
 
@@ -40,7 +41,8 @@ fun SearchResultList(results: List<SearchItem>, mapViewModel: MapViewModel) {
             stickyHeader {
                 Text(
                     title,
-                    color = MaterialTheme.colorScheme.primary
+                    color = MaterialTheme.colorScheme.onBackground,
+                    style = MaterialTheme.typography.titleLarge
 
                 )
             }
@@ -50,7 +52,7 @@ fun SearchResultList(results: List<SearchItem>, mapViewModel: MapViewModel) {
                     onClick = {
                         itemClicked.value = item
                     },
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = TextStyle(color = MaterialTheme.colorScheme.onBackground),
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(10.dp)

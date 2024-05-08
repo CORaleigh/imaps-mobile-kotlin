@@ -181,11 +181,13 @@ fun DeedInfo(selectedProperty: ArcGISFeature, mapViewModel: MapViewModel) {
                 }
             }
             if (bomDoc != "") {
-                Button(onClick = {
-                    uriHandler.openUri("https://rodcrpi.wakegov.com/booksweb/pdfview.aspx?docid=${bomDoc}&RecordDate=")
-                }, modifier = Modifier
-                    .weight(1f)
-                    .padding(5.dp)) {
+                Button(
+                    onClick = {
+                        uriHandler.openUri("https://rodcrpi.wakegov.com/booksweb/pdfview.aspx?docid=${bomDoc}&RecordDate=")
+                    }, modifier = Modifier
+                        .weight(1f)
+                        .padding(5.dp)
+                ) {
                     Text("Plat")
                 }
             }

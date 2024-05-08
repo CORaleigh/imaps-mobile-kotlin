@@ -17,22 +17,25 @@ import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
 private val DarkColorScheme = darkColorScheme(
-    primary = Purple80,
-    secondary = PurpleGrey80,
-    tertiary = Pink80
+    primary = Color(0xFF007AFF),//Color.LightGray,
+    secondaryContainer = Color(0xFF262529),
+    tertiary = Color(0xFF4D4C4C),
+    background = Color(0xFF1C1B1F)
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = Color.LightGray,
-    secondary = Color.Gray,
-    tertiary = Color.Gray,
+    primary = Color(0xFF007AFF),//Color.LightGray,
+//    secondary = Color.Gray,
+    tertiary = Color(0xFFE9E9E9),
     background = Color.White,
-    surface = Color.White,
-    onPrimary = Color.Gray,
-    onSecondary = Color.White,
-    onTertiary = Color.White,
-    onBackground = Color(0xFF1C1B1F),
-    onSurface = Color(0xFF1C1B1F),
+    secondaryContainer = Color(0xFFF1F1F1),
+
+//    surface = Color.White,
+//    onPrimary = Color.Gray,
+//    onSecondary = Color.White,
+//    onTertiary = Color.White,
+//    onBackground = Color(0xFF1C1B1F),
+//    onSurface = Color(0xFF1C1B1F),
 
 )
 
@@ -40,7 +43,7 @@ private val LightColorScheme = lightColorScheme(
 fun IMAPSMobileTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = true,
+    dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {

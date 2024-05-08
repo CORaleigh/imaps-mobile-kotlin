@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -45,19 +44,16 @@ import kotlinx.coroutines.launch
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
-fun BaseMaps(mapViewModel: MapViewModel, baseMapsViewModel: BaseMapsViewModel,
-             bottomSheetState: HideableBottomSheetState
+fun BaseMaps(
+    mapViewModel: MapViewModel, baseMapsViewModel: BaseMapsViewModel,
+    bottomSheetState: HideableBottomSheetState
 ) {
     val coroutineScope = rememberCoroutineScope()
-
-
     LaunchedEffect(Unit) {
         coroutineScope.launch {
             baseMapsViewModel.getPortalGroup("f6329364e80c438a958ce74aadc3a89f")
         }
     }
-
-
 
     Scaffold(
         topBar = {
@@ -72,7 +68,12 @@ fun BaseMaps(mapViewModel: MapViewModel, baseMapsViewModel: BaseMapsViewModel,
             BasemapButtonBar(baseMapsViewModel, coroutineScope)
         }
     ) {
-        Box(modifier = Modifier.padding(bottom = it.calculateBottomPadding() + 20.dp, top = it.calculateTopPadding())) {
+        Box(
+            modifier = Modifier.padding(
+                bottom = it.calculateBottomPadding() + 20.dp,
+                top = it.calculateTopPadding()
+            )
+        ) {
             BasemapList(
                 baseMapsViewModel = baseMapsViewModel,
                 mapViewModel = mapViewModel,
@@ -85,7 +86,10 @@ fun BaseMaps(mapViewModel: MapViewModel, baseMapsViewModel: BaseMapsViewModel,
 @Composable
 fun BasemapButtonBar(baseMapsViewModel: BaseMapsViewModel, coroutineScope: CoroutineScope) {
     val selected = baseMapsViewModel.selected.collectAsState()
-    BottomAppBar (modifier = Modifier.padding(10.dp)) {
+
+    BottomAppBar(
+        modifier = Modifier.padding(10.dp), containerColor = Color.Transparent
+    ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -93,16 +97,18 @@ fun BasemapButtonBar(baseMapsViewModel: BaseMapsViewModel, coroutineScope: Corou
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
             Button(
+                modifier = Modifier,
                 onClick = {
                     coroutineScope.launch {
                         baseMapsViewModel.basemapGroupChanged(BasemapGroup.MAPS)
                     }
                 },
                 colors = ButtonDefaults.buttonColors(
-                    contentColor = if (selected.value == BasemapGroup.MAPS) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
-                )
+                    contentColor = if (selected.value == BasemapGroup.MAPS) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.onSurface,
+                    containerColor = if (selected.value == BasemapGroup.MAPS) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
+                ),
 
-            ) {
+                ) {
                 Text(text = "Maps")
             }
             Button(
@@ -112,8 +118,10 @@ fun BasemapButtonBar(baseMapsViewModel: BaseMapsViewModel, coroutineScope: Corou
                     }
                 },
                 colors = ButtonDefaults.buttonColors(
-                    contentColor = if (selected.value == BasemapGroup.IMAGES) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
-                )
+                    contentColor = if (selected.value == BasemapGroup.IMAGES) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.onSurface,
+                    containerColor = if (selected.value == BasemapGroup.IMAGES) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
+
+                    )
 
             ) {
                 Text(text = "Images")
@@ -125,19 +133,16 @@ fun BasemapButtonBar(baseMapsViewModel: BaseMapsViewModel, coroutineScope: Corou
                     }
                 },
                 colors = ButtonDefaults.buttonColors(
-                    contentColor = if (selected.value == BasemapGroup.ESRI) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
-                ),
+                    contentColor = if (selected.value == BasemapGroup.ESRI) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.onSurface,
+                    containerColor = if (selected.value == BasemapGroup.ESRI) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
 
-
-                ) {
+                    ),
+            ) {
                 Text(text = "Esri")
             }
 
         }
-
-
     }
-
 }
 
 
@@ -150,6 +155,8 @@ fun BasemapList(
 ) {
     val maps = baseMapsViewModel.maps.collectAsState()
     val selectedBasemap = baseMapsViewModel.selectedBasemap.collectAsState()
+    val inRaleigh = baseMapsViewModel.inRaleigh.collectAsState()
+    val selectedGroup = baseMapsViewModel.selected.collectAsState()
 
     LazyVerticalGrid(
         columns = GridCells.Fixed(2),
@@ -158,12 +165,15 @@ fun BasemapList(
         horizontalArrangement = Arrangement.spacedBy(10.dp),
         modifier = Modifier.fillMaxSize()
     ) {
-        items(maps.value) { item ->
+        items(maps.value.filter {
+            selectedGroup.value != BasemapGroup.IMAGES || (inRaleigh.value || it.tags.contains(
+                "countywide"
+            ))
+        }) { item ->
             if (item.thumbnail != null) {
-
                 OutlinedCard(
                     modifier = Modifier
-                        .height(160.dp)
+                        .height(170.dp)
                         .padding(6.dp),
                     onClick = {
                         Log.i("test", item.title)
@@ -174,31 +184,34 @@ fun BasemapList(
                     border = if (selectedBasemap.value == item.itemId) BorderStroke(
                         2.dp,
                         MaterialTheme.colorScheme.primary
-                    ) else BorderStroke(0.dp, Color.Transparent),
+                    ) else BorderStroke(10.dp, Color.Transparent),
                     colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                        containerColor = MaterialTheme.colorScheme.tertiary
                     )
 
                 ) {
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
+
                         AsyncImage(
                             model = item.thumbnail?.uri,
                             contentDescription = item.title,
                             modifier = Modifier.fillMaxWidth()
                         )
-                        Spacer(modifier = Modifier.height(10.dp))
+                        //Spacer(modifier = Modifier.height(10.dp))
                         Text(
                             text = item.title,
                             color = MaterialTheme.colorScheme.onSurface,
                             style = MaterialTheme.typography.labelLarge,
-                            modifier = Modifier.wrapContentSize()
+                            modifier = Modifier
+                                .wrapContentSize()
+                                .padding(10.dp)
                         )
+
                     }
                 }
             }
-
         }
     }
 }

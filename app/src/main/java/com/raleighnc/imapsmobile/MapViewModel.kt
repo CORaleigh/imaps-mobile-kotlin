@@ -11,9 +11,13 @@ import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.AndroidViewModel
+import com.arcgismaps.arcade.ArcadeEvaluator
+import com.arcgismaps.arcade.ArcadeExpression
+import com.arcgismaps.arcade.ArcadeProfile
 import com.arcgismaps.data.ArcGISFeature
 import com.arcgismaps.data.Feature
 import com.arcgismaps.data.FeatureQueryResult
+import com.arcgismaps.data.OrderBy
 import com.arcgismaps.data.QueryFeatureFields
 import com.arcgismaps.data.QueryParameters
 import com.arcgismaps.data.ServiceFeatureTable
@@ -26,6 +30,7 @@ import com.arcgismaps.mapping.Viewpoint
 import com.arcgismaps.mapping.layers.FeatureLayer
 import com.arcgismaps.mapping.layers.GroupLayer
 import com.arcgismaps.mapping.layers.Layer
+import com.arcgismaps.mapping.popup.PopupElement
 import com.arcgismaps.mapping.view.LocationDisplay
 import com.arcgismaps.mapping.view.ScreenCoordinate
 import com.arcgismaps.portal.Portal
@@ -43,9 +48,13 @@ class MapViewModel(
 
     val mapViewProxy = MapViewProxy()
     var map = ArcGISMap(BasemapStyle.ArcGISCommunity)
+
     private val _isLoaded = MutableStateFlow(false)
+    val isLoaded = _isLoaded.asStateFlow()
+
     private val _selectedProperty: MutableStateFlow<ArcGISFeature?> = MutableStateFlow(null)
     val selectedProperty = _selectedProperty.asStateFlow()
+
     private val _selectedProperties: MutableStateFlow<List<Feature>> = MutableStateFlow(
         emptyList()
     )
@@ -53,7 +62,16 @@ class MapViewModel(
 
     private val _locationEnabled: MutableStateFlow<Boolean> = MutableStateFlow(false)
     val locationEnabled = _locationEnabled.asStateFlow()
+
     val locationDisplay: LocationDisplay = LocationDisplay()
+
+
+    private var _popupViews = MutableStateFlow<List<PopupView>>(emptyList())
+    val popupViews = _popupViews.asStateFlow()
+
+    private val _selectedGeometry = MutableStateFlow<Geometry?>(null)
+    val selectedGeometry = _selectedGeometry.asStateFlow()
+
     init {
         val portalItem = PortalItem(
             Portal("https://www.arcgis.com"), "95092428774c4b1fb6a3b6f5fed9fbc4"
@@ -71,19 +89,27 @@ class MapViewModel(
                     }
                 }
                 _isLoaded.value = true
-                setLayerVisiblity(map)
+                setLayerVisibility(map)
 
             }
         }
 
     }
 
-    suspend fun getCondo(field: String, value: String) {
+    suspend fun getCondo(field: String, value: Any?) {
         sampleCoroutineScope.launch {
             val table = map.tables.find { it.displayName == "Condos" }
             if (table != null) {
-                val params = QueryParameters()
+                var params = QueryParameters()
                 params.whereClause = "$field = '$value'"
+                if (field == "PIN_NUM") {
+                    params.orderByFields.add(OrderBy("PIN_NUM"))
+                    params.orderByFields.add(OrderBy("PIN_EXT"))
+                } else if (field == "FULL_STREET_NAME") {
+                    params.orderByFields.add(OrderBy("SITE_ADDRESS"))
+                } else {
+                    params.orderByFields.add(OrderBy(field))
+                }
                 val featureQueryResult =
                     (table as ServiceFeatureTable).queryFeatures(params, QueryFeatureFields.LoadAll)
                         .getOrElse {
@@ -91,7 +117,7 @@ class MapViewModel(
                         } as FeatureQueryResult
                 val featureResultList = featureQueryResult.toList()
                 if (featureResultList.isNotEmpty()) {
-                    Log.i("test",featureResultList.count().toString())
+                    Log.i("test", featureResultList.count().toString())
 
                     if (featureResultList.count() == 1) {
                         val condoFeature = featureResultList.first()
@@ -114,6 +140,8 @@ class MapViewModel(
         if (table != null) {
             val params = QueryParameters()
             params.whereClause = "PIN_NUM = '${propertyFeature.attributes["PIN_NUM"].toString()}'"
+            params.orderByFields.add(OrderBy("PIN_NUM"))
+            params.orderByFields.add(OrderBy("PIN_EXT"))
             val featureQueryResult =
                 (table as ServiceFeatureTable).queryFeatures(params, QueryFeatureFields.LoadAll)
                     .getOrElse {
@@ -138,7 +166,7 @@ class MapViewModel(
 
         val group = map.operationalLayers.find { it.name == "Property" }
         if (group != null) {
-            val layer = (group as GroupLayer).subLayerContents.value.first { it.name == "Property" }
+            val layer = (group as GroupLayer).layers.first { it.name == "Property" }
             val params = QueryParameters()
             params.whereClause = "PIN_NUM = '$pin'"
             if (layer is FeatureLayer) {
@@ -169,6 +197,7 @@ class MapViewModel(
             layer.clearSelection()
             layer.selectFeature(feature)
             sampleCoroutineScope.launch {
+                _selectedGeometry.value = feature.geometry
                 mapViewProxy.setViewpointGeometry(feature.geometry?.extent as Geometry, 100.0)
             }
         }
@@ -178,7 +207,7 @@ class MapViewModel(
         val group = map.operationalLayers.find { it.name == "Property" }
 
         if (group != null) {
-            val layer = (group as GroupLayer).subLayerContents.value.first { it.name == "Property" }
+            val layer = (group as GroupLayer).layers.first { it.name == "Property" }
             val params = QueryParameters()
             params.geometry = mapPoint
             params.whereClause = "1=1"
@@ -197,67 +226,108 @@ class MapViewModel(
     fun selectProperty(feature: ArcGISFeature?) {
         _selectedProperty.value = feature
     }
+
     private fun selectProperties(features: List<Feature>) {
         _selectedProperties.value = features
     }
-    private fun setLayerVisiblity(map: ArcGISMap) {
-        val visibleLayers: List<Layer> = emptyList()
-        map.operationalLayers.forEach { layer ->
+
+    fun setLayerVisibility(map: ArcGISMap) {
+        val visibleLayers: List<String> =
+            sharedPreferences.getString("visibleLayers", "")?.split(",") ?: emptyList()
+
+        fun setVisibility(layer: Layer) {
             if (layer is GroupLayer) {
                 layer.isVisible = true
-                layer.subLayerContents.value.forEach { sublayer ->
-                    if (sublayer is GroupLayer) {
-                        sublayer.isVisible = true
-                        sublayer.subLayerContents.value.forEach { sublayer2 ->
-                            if (sublayer2 is GroupLayer) {
-                                sublayer2.isVisible = true
-                                sublayer2.subLayerContents.value.forEach { sublayer3 ->
-                                    if (sublayer3 is GroupLayer) {
-                                        sublayer3.isVisible = true
-                                    } else if (sublayer3.name != "Property") {
-                                        sublayer3.isVisible =
-                                            visibleLayers.any { it.name == sublayer3.name }
-                                    }
-                                }
-                            } else if (sublayer2.name != "Property") {
-                                sublayer2.isVisible =
-                                    visibleLayers.any { it.name == sublayer2.name }
-                            }
-                        }
-                    } else if (sublayer.name != "Property") {
-                        sublayer.isVisible = visibleLayers.any { it.name == sublayer.name }
-                    }
+                layer.layers.forEach { subLayer ->
+                    setVisibility(subLayer)
                 }
-            } else if (layer.name != "Property") {
-                layer.isVisible = false
+            } else {
+                if (layer.name != "Property") {
+                    layer.isVisible = visibleLayers.any { it == layer.name }
+                } else {
+                    layer.isVisible = true
+                }
             }
         }
+
+        map.operationalLayers.forEach(::setVisibility)
     }
 
     suspend fun onSingleTap(screenCoordinate: ScreenCoordinate) {
-        Log.i("identify", "identify")
-
+        Log.i("pservices", "test " + screenCoordinate.toString())
+        _popupViews.value = emptyList()
         mapViewProxy.identifyLayers(
             screenCoordinate = screenCoordinate,
             tolerance = 100.dp,
             returnPopupsOnly = false
         ).onSuccess { results ->
             results.forEach { result ->
+                if (result.layerContent.name != "Property") {
+                    result.popups.forEach { popup ->
+                        try {
+                            if (result.layerContent.name == "Property") {
+                                popup.popupDefinition.expressions.removeAt(0)
+                                popup.popupDefinition.expressions.removeAt(0)
+                                popup.popupDefinition.expressions.removeAt(0)
+                            }
 
-                if (result.geoElements.isNotEmpty()) {
-                    val feature = result.geoElements.first() as ArcGISFeature
-                    Log.i("identify", feature.attributes.toString())
+
+                            popup.evaluateExpressions().onSuccess {
+                                Log.i("test", "test")
+                                _popupViews.value += PopupView(
+                                    popup.title,
+                                    popup.evaluatedElements,
+                                    result.layerContent as Layer
+                                )
+                                //_popupElements.value = popup.evaluatedElements
+                            }.onFailure { exception ->
+                                Log.i("test", "test")
+
+                            }
+                        } catch (e: Exception) {
+                            Log.i("test", e.message.toString())
+
+                        }
+
+                    }
                 }
+//                else  {
+                result.popups.forEach { popup ->
+                    popup.popupDefinition.expressions.forEach { expression ->
+                        Log.i("test", expression.expression)
+                        val arcadeExpression = ArcadeExpression(expression.expression)
+                        val arcadeEvaluator =
+                            ArcadeEvaluator(arcadeExpression, ArcadeProfile.PopupElement)
+                        val profileVariables = mapOf<String, Any>("\$feature" to popup.geoElement)
+                        val evaluationResult =
+                            arcadeEvaluator.evaluate(profileVariables).onSuccess {
+                                Log.i("test", it.result as String)
+                            }
+
+                    }
+                }
+//                }
+
             }
         }
     }
 
     suspend fun displayLocation(context: Context, mainActivity: MainActivity) {
-        val permissionsCheckFineLocation = ContextCompat.checkSelfPermission(context, ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
-        val permissionsCheckCourseLocation = ContextCompat.checkSelfPermission(context, ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+        val permissionsCheckFineLocation = ContextCompat.checkSelfPermission(
+            context,
+            ACCESS_FINE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
+        val permissionsCheckCourseLocation = ContextCompat.checkSelfPermission(
+            context,
+            ACCESS_COARSE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
 
         if (!(permissionsCheckFineLocation && permissionsCheckCourseLocation)) {
-            ActivityCompat.requestPermissions(mainActivity, arrayOf(ACCESS_COARSE_LOCATION, ACCESS_FINE_LOCATION), 2)
+            ActivityCompat.requestPermissions(
+                mainActivity,
+                arrayOf(ACCESS_COARSE_LOCATION, ACCESS_FINE_LOCATION),
+                2
+            )
         } else {
             locationDisplay.setAutoPanMode(LocationDisplayAutoPanMode.Recenter)
             locationDisplay.dataSource.start()
@@ -270,9 +340,14 @@ class MapViewModel(
     }
 
     fun locationButtonClicked() {
-        _locationEnabled.value = !_locationEnabled.value
+        if (isLoaded.value) {
+            _locationEnabled.value = !_locationEnabled.value
+        }
     }
-
-
 }
 
+data class PopupView(
+    val title: String,
+    val popupElements: List<PopupElement>,
+    val layer: Layer
+)

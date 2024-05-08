@@ -18,19 +18,24 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -46,64 +51,112 @@ import androidx.navigation.compose.rememberNavController
 import com.arcgismaps.mapping.layers.GroupLayer
 import com.arcgismaps.mapping.layers.Layer
 import com.raleighnc.imapsmobile.HideableBottomSheetState
+import com.raleighnc.imapsmobile.LayerListTopBar
 import com.raleighnc.imapsmobile.MapViewModel
 import com.raleighnc.imapsmobile.TopBar
+import com.raleighnc.imapsmobile.expandAllLayers
 
 @Composable
-fun LayerList(mapViewModel: MapViewModel,
-              bottomSheetState: HideableBottomSheetState
+fun LayerList(
+    mapViewModel: MapViewModel, bottomSheetState: HideableBottomSheetState
 ) {
-    val application = LocalContext.current.applicationContext as Application
-    val sharedPreferences = application.getSharedPreferences("imaps_prefs", Context.MODE_PRIVATE)
     val coroutineScope = rememberCoroutineScope()
     val navController = rememberNavController()
     val layerClicked = remember { mutableStateOf<Layer?>(null) }
-    val expandedLayers = remember { mutableListOf<Layer>() }
+    val expandedLayers = remember { mutableStateListOf<Layer>() }
+    var layerSearchText by remember { mutableStateOf("") }
+
     LaunchedEffect(layerClicked.value) {
         if (layerClicked.value != null) {
             navController.navigate(LayerScreens.LAYERINFO.name)
         }
     }
     NavHost(
-        navController = navController,
-        startDestination = LayerScreens.LAYERLIST.name
+        navController = navController, startDestination = LayerScreens.LAYERLIST.name
     ) {
         composable(LayerScreens.LAYERLIST.name) {
-            Scaffold(
-                topBar = {
-                    TopBar(
-                        title = "Layers",
-                        bottomSheetState = bottomSheetState,
-                        coroutineScope = coroutineScope,
-                        navController = navController
+            Scaffold(topBar = {
+                LayerListTopBar(title = "Layers",
+                    bottomSheetState = bottomSheetState,
+                    coroutineScope = coroutineScope,
+                    navController = navController,
+                    mapViewModel = mapViewModel,
+                    expandedLayers = expandedLayers,
+                    addExpandedLayer = { layer ->
+                        expandedLayers.add(layer)
+                    },
+                    resetLayerList = {
+                        expandedLayers.removeAll(expandedLayers)
+                    })
+            }) {
+                Box(
+                    modifier = Modifier.padding(
+                        top = it.calculateTopPadding(), bottom = it.calculateBottomPadding() + 20.dp
                     )
-                }
-            ) {
-                Box(modifier = Modifier.padding( top = it.calculateTopPadding(), bottom = it.calculateBottomPadding() + 20.dp)) {
-                    LazyColumn (modifier = Modifier
-                        .fillMaxSize()
-                        .padding(start = 30.dp, end = 30.dp)) {
-                        item {
-                            for (layer in mapViewModel.map.operationalLayers.reversed()) {
-                                layer.isVisible = true
-                                SubLayer(layer = layer, layerClicked = layerClicked, expandedLayers = expandedLayers)
+                ) {
+                    Column {
+                        TextField(value = layerSearchText,
+                            onValueChange = {
+                                layerSearchText = it
+                                if (it.isEmpty()) {
+                                    expandedLayers.removeAll(expandedLayers)
+                                } else {
+                                    expandAllLayers(mapViewModel.map, expandedLayers) {
+                                        expandedLayers.add(it)
+                                    }
+                                }
+                            },
+                            trailingIcon = {
+                                if (layerSearchText.isNotEmpty()) {
+                                    Icon(Icons.Default.Clear,
+                                        contentDescription = "clear text",
+                                        modifier = Modifier.clickable {
+                                                layerSearchText = ""
+                                                expandedLayers.removeAll(expandedLayers)
+                                            })
+                                }
+                            },
+                            leadingIcon = {
+                                Icon(Icons.Default.Search, contentDescription = "search")
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = TextFieldDefaults.colors(
+                                focusedContainerColor = MaterialTheme.colorScheme.tertiary,
+                                unfocusedContainerColor = MaterialTheme.colorScheme.tertiary,
+
+                                )
+                        )
+                        LazyColumn(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(start = 30.dp, end = 30.dp)
+                        ) {
+                            item {
+                                for (layer in mapViewModel.map.operationalLayers.reversed()) {
+                                    layer.isVisible = true
+                                    SubLayer(
+                                        layer = layer,
+                                        layerClicked = layerClicked,
+                                        expandedLayers = expandedLayers,
+                                        layerSearchText = layerSearchText
+                                    )
+                                }
                             }
                         }
                     }
+
                 }
             }
         }
         composable(LayerScreens.LAYERINFO.name) {
-            Scaffold(
-                topBar = {
-                    TopBar(
-                        title = "Layer Info",
-                        bottomSheetState = bottomSheetState,
-                        coroutineScope = coroutineScope,
-                        navController = navController
-                    )
-                }
-            ) {
+            Scaffold(topBar = {
+                TopBar(
+                    title = "Layer Info",
+                    bottomSheetState = bottomSheetState,
+                    coroutineScope = coroutineScope,
+                    navController = navController
+                )
+            }) {
                 Box(modifier = Modifier.padding(it)) {
                     layerClicked.value?.let { layer -> LayerInfo(layer = layer) }
                 }
@@ -114,76 +167,125 @@ fun LayerList(mapViewModel: MapViewModel,
 }
 
 @Composable
-fun SubLayer(layer: Layer, layerClicked: MutableState<Layer?>, expandedLayers: MutableList<Layer>) {
-    var isExpanded by remember { mutableStateOf(expandedLayers.contains(layer)) }
+fun SubLayer(
+    layer: Layer,
+    layerClicked: MutableState<Layer?>,
+    expandedLayers: MutableList<Layer>,
+    layerSearchText: String
+) {
+    var isExpanded by remember { mutableStateOf(false) }
+    isExpanded = expandedLayers.contains(layer)
     var isVisible by remember { mutableStateOf(layer.isVisible) }
+    val application = LocalContext.current.applicationContext as Application
+    val sharedPreferences = application.getSharedPreferences("imaps_prefs", Context.MODE_PRIVATE)
 
-    val subLayerContent = layer.subLayerContents.collectAsState()
-
-    Column  {
+    Column {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween,
             modifier = Modifier
                 .fillMaxWidth()
                 .clickable(onClick = {
-                    if (expandedLayers.contains(layer)) {
-                        expandedLayers.remove(layer)
+                    if (layer is GroupLayer) {
+                        if (expandedLayers.contains(layer)) {
+                            expandedLayers.remove(layer)
+                        } else {
+                            expandedLayers.add(layer)
+                        }
+                        isExpanded = !isExpanded
                     } else {
-                        expandedLayers.add(layer)
+                        isVisible = !isVisible
+                        layer.isVisible = isVisible
                     }
-                    isExpanded = !isExpanded
                 })
         ) {
             if (layer is GroupLayer) {
-                Text(
-                    text = AnnotatedString(layer.name),
-                    style = MaterialTheme.typography.bodyMedium
-                )
+                if (layer.layers.filter {
+                        it.name.lowercase().contains(layerSearchText.lowercase())
+                    }.isNotEmpty()) {
+                    Text(
+                        text = AnnotatedString(layer.name),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    IconButton(onClick = {
+                        if (expandedLayers.contains(layer)) {
+                            expandedLayers.remove(layer)
+                        } else {
+                            expandedLayers.add(layer)
+                        }
+                        isExpanded = !isExpanded
+                    }) {
+                        if (expandedLayers.contains(layer)) {
+                            Icon(
+                                Icons.Filled.KeyboardArrowDown,
+                                contentDescription = "Expanded",
+                                tint = MaterialTheme.colorScheme.onSurface
+                            )
 
-                IconButton(onClick = {
-                    if (expandedLayers.contains(layer)) {
-                        expandedLayers.remove(layer)
-                    } else {
-                        expandedLayers.add(layer)
+                        } else {
+                            Icon(
+                                Icons.Filled.KeyboardArrowRight,
+                                contentDescription = "Collapsed",
+                                tint = MaterialTheme.colorScheme.onSurface
+                            )
+
+                        }
+
                     }
-                    isExpanded = !isExpanded
-                }) {
-                    if (expandedLayers.contains(layer)) {
-                        Icon(
-                            Icons.Filled.KeyboardArrowDown,
-                            contentDescription = "Expanded",
-                            tint = MaterialTheme.colorScheme.onSurface
-                        )
+                }
+            } else {
+                if (layerSearchText.isEmpty() || layer.name.lowercase()
+                        .contains(layerSearchText.lowercase())
+                ) {
+                    Text(
+                        text = layer.name,
+                        modifier = Modifier
+                            .wrapContentWidth(align = Alignment.Start)
+                            .weight(1f)
+                    )
+                    Spacer(modifier = Modifier.width(16.dp)) // Optional: Add spacing between text components
+                    Switch(
+                        checked = isVisible, onCheckedChange = {
+                            isVisible = it
+                            layer.isVisible = isVisible
+                            val editor = sharedPreferences.edit()
+                            if (sharedPreferences.getString("visibleLayers", "") != null) {
+                                val layersString =
+                                    sharedPreferences.getString("visibleLayers", "").toString()
+                                Log.i("test", layersString)
 
-                    } else {
+                                val layers = layersString.split(",").toMutableList()
+                                if (!isVisible) {
+                                    layers.remove(layer.name)
+                                } else {
+                                    layers.add(layer.name)
+                                }
+                                editor.putString(
+                                    "visibleLayers",
+                                    layers.toString().replace("[", "").replace("]", "")
+                                        .replace(", ", ",")
+                                )
+                            } else {
+                                editor.putString("visibleLayers", layer.name)
+                            }
+                            editor.apply()
+
+                        }, colors = SwitchDefaults.colors(
+                            checkedThumbColor = MaterialTheme.colorScheme.surface,
+                            checkedTrackColor = MaterialTheme.colorScheme.primary,
+                            uncheckedThumbColor = MaterialTheme.colorScheme.secondary,
+                            uncheckedTrackColor = MaterialTheme.colorScheme.background,
+                        )
+                    )
+                    IconButton(onClick = { layerClicked.value = layer }) {
                         Icon(
                             Icons.Filled.KeyboardArrowRight,
                             contentDescription = "Collapsed",
                             tint = MaterialTheme.colorScheme.onSurface
                         )
-
                     }
-
                 }
-            } else {
-                Text(text = layer.name, modifier = Modifier
-                    .wrapContentWidth(align = Alignment.Start)
-                    .weight(1f))
-                Spacer(modifier = Modifier.width(16.dp)) // Optional: Add spacing between text components
-                Switch(checked = isVisible, onCheckedChange = {
-                    isVisible = it
-                    layer.isVisible = isVisible
-                    Log.i("LayerVisibility", "Layer ${layer.name} visibility set to $it")
 
-                })
-                IconButton(onClick = { layerClicked.value = layer }) {
-                    Icon(
-                        Icons.Filled.KeyboardArrowRight,
-                        contentDescription = "Collapsed",
-                        tint = MaterialTheme.colorScheme.onSurface
-                    )
-                }
             }
 
 
@@ -195,9 +297,14 @@ fun SubLayer(layer: Layer, layerClicked: MutableState<Layer?>, expandedLayers: M
         ) {
 
             Column {
-                if (subLayerContent != null) {
-                    for (subLayer in subLayerContent.value.reversed()) {
-                        SubLayer(layer = subLayer as Layer, layerClicked = layerClicked, expandedLayers = expandedLayers)
+                if (layer is GroupLayer) {
+                    for (subLayer in layer.layers.reversed()) {
+                        SubLayer(
+                            layer = subLayer,
+                            layerClicked = layerClicked,
+                            expandedLayers = expandedLayers,
+                            layerSearchText = layerSearchText
+                        )
                     }
                 }
             }
@@ -206,6 +313,5 @@ fun SubLayer(layer: Layer, layerClicked: MutableState<Layer?>, expandedLayers: M
 }
 
 enum class LayerScreens {
-    LAYERLIST,
-    LAYERINFO
+    LAYERLIST, LAYERINFO
 }

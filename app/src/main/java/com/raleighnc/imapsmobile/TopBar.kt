@@ -1,6 +1,5 @@
 package com.raleighnc.imapsmobile
 
-import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -38,31 +37,31 @@ fun TopBar(
         Column(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-
             Box(
                 modifier = Modifier
                     .size(30.dp, 5.dp)
                     .background(Color.Transparent)
-                    .background(Color.LightGray, shape = RoundedCornerShape(5.dp))
+                    .background(Color.Transparent, shape = RoundedCornerShape(5.dp))
             )
             Spacer(
                 modifier = Modifier
                     .height(5.dp)
-
             )
-
             Text(
                 title,
                 style = MaterialTheme.typography.titleMedium
-
-                )
+            )
         }
     },
         navigationIcon = {
             if (navController?.previousBackStackEntry != null) {
-                Log.i("previousBackStackEntry",navController?.previousBackStackEntry.toString())
                 IconButton(onClick = {
-                    navController?.popBackStack()
+                    if (navController.previousBackStackEntry?.destination?.route == "PROPERTYINFO" && navController.currentDestination?.route != "SERVICES") {
+                        navController.navigate("SEARCH")
+                    } else {
+                        navController.popBackStack()
+                    }
+
                 }) {
                     Icon(
                         imageVector = Icons.Filled.KeyboardArrowLeft,

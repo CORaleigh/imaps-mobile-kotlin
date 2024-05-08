@@ -18,12 +18,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -50,6 +50,10 @@ fun MainScreen(mainActivity: MainActivity) {
     val selectedPanel = remember { mutableStateOf(Panels.NONE) }
     val locationEnabled = mapViewModel.locationEnabled.collectAsState()
 
+    val popupViews by mapViewModel.popupViews.collectAsState()
+    val isLoaded by mapViewModel.isLoaded.collectAsState()
+
+
     if (selectedProperty.value != null) {
         Log.i("map press", selectedProperty.value?.attributes.toString())
     }
@@ -64,13 +68,21 @@ fun MainScreen(mainActivity: MainActivity) {
         }
     }
 
+    LaunchedEffect(popupViews) {
+        if (popupViews.isNotEmpty()) {
+            selectedPanel.value = Panels.POPUP
+            bottomSheetState.expand()
+        }
+
+    }
+
     LaunchedEffect(locationEnabled.value) {
         Log.i("test", locationEnabled.value.toString())
-            if (locationEnabled.value) {
-                mapViewModel.displayLocation(context, mainActivity)
-            } else {
-                mapViewModel.stopDisplayingLocation()
-            }
+        if (locationEnabled.value) {
+            mapViewModel.displayLocation(context, mainActivity)
+        } else {
+            mapViewModel.stopDisplayingLocation()
+        }
 
     }
 
@@ -85,8 +97,7 @@ fun MainScreen(mainActivity: MainActivity) {
                 searchViewModel
             )
         },
-        sheetBackgroundColor = Color.White,
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier.fillMaxSize()
     ) {
 
         Box(
@@ -102,6 +113,9 @@ fun MainScreen(mainActivity: MainActivity) {
                     val editor = sharedPreferences.edit()
                     editor.putString("viewpoint", viewpoint.toJson())
                     editor.apply()
+                    coroutineScope.launch {
+                        baseMapsViewModel.mapExtentUpdated(viewpoint)
+                    }
                 },
                 onLongPress = { longPressConfirmedEvent ->
                     coroutineScope.launch {
@@ -121,36 +135,40 @@ fun MainScreen(mainActivity: MainActivity) {
                 modifier = Modifier
                     .align(Alignment.TopStart)
                     .padding(10.dp),
-                containerColor = MaterialTheme.colorScheme.surface,
+                containerColor = MaterialTheme.colorScheme.background,
                 onClick = {
 
                     coroutineScope.launch {
-                        mapViewModel.locationButtonClicked()
+                        if (isLoaded) {
+                            mapViewModel.locationButtonClicked()
+                        }
                     }
 
                 }) {
                 Icon(
                     Icons.Filled.MyLocation,
                     contentDescription = "display location",
-                    tint = MaterialTheme.colorScheme.secondary
+                    tint = MaterialTheme.colorScheme.onBackground
                 )
             }
             FloatingActionButton(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .padding(10.dp),
-                containerColor = MaterialTheme.colorScheme.surface,
+                containerColor = MaterialTheme.colorScheme.background,
                 onClick = {
                     coroutineScope.launch {
-                        selectedPanel.value = Panels.SEARCH
-                        bottomSheetState.expand()
+                        if (isLoaded) {
+                            selectedPanel.value = Panels.SEARCH
+                            bottomSheetState.expand()
+                        }
                     }
 
                 }) {
                 Icon(
                     Icons.Filled.Search,
                     contentDescription = stringResource(id = R.string.search_content_desc),
-                    tint = MaterialTheme.colorScheme.secondary
+                    tint = MaterialTheme.colorScheme.onBackground
                 )
             }
             FloatingActionButton(
@@ -158,19 +176,20 @@ fun MainScreen(mainActivity: MainActivity) {
                     .align(Alignment.TopEnd)
                     .padding(10.dp)
                     .absoluteOffset(y = 65.dp),
-                containerColor = MaterialTheme.colorScheme.surface,
+                containerColor = MaterialTheme.colorScheme.background,
                 onClick = {
                     coroutineScope.launch {
-                        selectedPanel.value = Panels.LAYERS
-
-                        bottomSheetState.expand()
+                        if (isLoaded) {
+                            selectedPanel.value = Panels.LAYERS
+                            bottomSheetState.expand()
+                        }
                     }
 
                 }) {
                 Icon(
                     Icons.Filled.Layers,
                     contentDescription = stringResource(id = R.string.layers_content_desc),
-                    tint = MaterialTheme.colorScheme.secondary
+                    tint = MaterialTheme.colorScheme.onBackground
                 )
 
             }
@@ -179,19 +198,21 @@ fun MainScreen(mainActivity: MainActivity) {
                     .align(Alignment.TopEnd)
                     .padding(10.dp)
                     .absoluteOffset(y = 130.dp),
-                containerColor = MaterialTheme.colorScheme.surface,
+                containerColor = MaterialTheme.colorScheme.background,
                 onClick = {
                     coroutineScope.launch {
-                        selectedPanel.value = Panels.BASEMAP
+                        if (isLoaded) {
+                            selectedPanel.value = Panels.BASEMAP
+                            bottomSheetState.expand()
+                        }
 
-                        bottomSheetState.expand()
                     }
 
                 }) {
                 Icon(
                     Icons.Filled.Map,
                     contentDescription = stringResource(id = R.string.layers_content_desc),
-                    tint = MaterialTheme.colorScheme.secondary
+                    tint = MaterialTheme.colorScheme.onBackground
                 )
 
             }

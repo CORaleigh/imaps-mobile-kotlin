@@ -1,5 +1,3 @@
-
-
 @file:OptIn(ExperimentalFoundationApi::class)
 
 package com.raleighnc.imapsmobile
@@ -45,7 +43,7 @@ fun HideableBottomSheetScaffold(
     bottomSheetContent: @Composable BoxScope.() -> Unit,
     modifier: Modifier = Modifier,
     sheetShape: Shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
-    sheetBackgroundColor: Color = MaterialTheme.colorScheme.background,
+    x: Color = MaterialTheme.colorScheme.background,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     var layoutHeight by remember { mutableIntStateOf(0) }
@@ -91,7 +89,7 @@ fun HideableBottomSheetScaffold(
                     orientation = Orientation.Vertical
                 )
                 .nestedScroll(bottomSheetNestedScrollConnection)
-                .background(sheetBackgroundColor, sheetShape)
+                .background(MaterialTheme.colorScheme.background, sheetShape)
                 .padding(vertical = 16.dp),
         ) {
             Box(

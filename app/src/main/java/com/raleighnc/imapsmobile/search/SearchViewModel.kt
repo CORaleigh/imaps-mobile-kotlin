@@ -1,6 +1,5 @@
 package com.raleighnc.imapsmobile.search
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import com.arcgismaps.ArcGISEnvironment
 import com.arcgismaps.httpcore.Request
@@ -12,13 +11,12 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
 class SearchViewModel : ViewModel() {
-    //first state whether the search is happening or not
     private val _isSearching = MutableStateFlow(false)
     var isSearching = _isSearching.asStateFlow()
 
-    //second state the text typed by the user
     private val _searchText = MutableStateFlow("")
     val searchText = _searchText.asStateFlow()
+
     private val _results = MutableStateFlow<List<SearchItem>>(emptyList())
     val results: StateFlow<List<SearchItem>> get() = _results
     fun onSearchTextChange(text: String) {
@@ -29,6 +27,7 @@ class SearchViewModel : ViewModel() {
         _isSearching.value = !_isSearching.value
         if (!_isSearching.value) {
             onSearchTextChange("")
+
         }
     }
 
@@ -43,9 +42,7 @@ class SearchViewModel : ViewModel() {
             request.addParameter("orderByFields", "$field ASC")
             request.addParameter("where", "$field like '$value%'")
             request.addParameter("resultRecordCount", "10")
-            Log.i("test", value)
             ArcGISEnvironment.arcGISHttpClient.execute(request.build()).onSuccess {
-
                 val str = it.body?.string().orEmpty()
                 if (str != "") {
                     val obj = Json.decodeFromString<SearchResponse>(str)

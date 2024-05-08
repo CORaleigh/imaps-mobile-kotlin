@@ -34,41 +34,50 @@ fun LayerInfo(layer: Layer) {
     var sliderPosition by remember { mutableFloatStateOf(layer.opacity) }
     layer.opacity = sliderPosition
     Log.i("test", swatches.count().toString())
-    LaunchedEffect (layer) {
-            coroutineScope.launch {
-                layer.fetchLegendInfos().onSuccess { infos ->
-                    infos.forEach { info ->
-                        info.symbol?.createSwatch(screenScale= 4.0F)?.onSuccess {swatch ->
-                            var label = info.name
-                            if (label == "") {
-                                label = layer.name
-                            }
-                            swatches += LegendSwatch(label = label, swatch = swatch)
+    LaunchedEffect(layer) {
+        coroutineScope.launch {
+            layer.fetchLegendInfos().onSuccess { infos ->
+                infos.forEach { info ->
+                    info.symbol?.createSwatch(screenScale = 4.0F)?.onSuccess { swatch ->
+                        var label = info.name
+                        if (label == "") {
+                            label = layer.name
                         }
+                        swatches += LegendSwatch(label = label, swatch = swatch)
                     }
-
                 }
+
             }
         }
-
-
-        Column (modifier = Modifier
+    }
+    Column(
+        modifier = Modifier
             .fillMaxSize()
-            .padding(start = 30.dp, end = 30.dp)) {
-            Slider(value = sliderPosition, onValueChange = {sliderPosition = it}, steps = 10, valueRange = 0f..1f)
-            LazyColumn(modifier = Modifier.fillMaxSize()) {
-                items(swatches) { swatch ->
-                    Row {
-                        Image(bitmap = swatch.swatch.bitmap.asImageBitmap(), contentDescription = swatch.label,
-                            modifier=Modifier.alpha(sliderPosition))
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Text(text = swatch.label)
-                    }
-
+            .padding(start = 30.dp, end = 30.dp)
+    ) {
+        Slider(
+            value = sliderPosition,
+            onValueChange = { sliderPosition = it },
+            steps = 10,
+            valueRange = 0f..1f
+        )
+        LazyColumn(modifier = Modifier.fillMaxSize()) {
+            items(swatches) { swatch ->
+                Row {
+                    Image(
+                        bitmap = swatch.swatch.bitmap.asImageBitmap(),
+                        contentDescription = swatch.label,
+                        modifier = Modifier.alpha(sliderPosition)
+                    )
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Text(text = swatch.label)
                 }
+
             }
         }
+    }
 }
+
 data class LegendSwatch(
     val label: String,
     val swatch: BitmapDrawable
