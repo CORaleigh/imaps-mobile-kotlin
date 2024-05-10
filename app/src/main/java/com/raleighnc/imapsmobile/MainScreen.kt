@@ -2,7 +2,7 @@ package com.raleighnc.imapsmobile
 
 import android.app.Application
 import android.content.Context
-import android.util.Log
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.absoluteOffset
 import androidx.compose.foundation.layout.fillMaxSize
@@ -22,12 +22,15 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.arcgismaps.Color
 import com.arcgismaps.mapping.Viewpoint
+import com.arcgismaps.mapping.view.BackgroundGrid
 import com.arcgismaps.toolkit.geoviewcompose.MapView
 import com.raleighnc.imapsmobile.HideableBottomSheetValue.Hidden
 import com.raleighnc.imapsmobile.basemaps.BaseMapsViewModel
@@ -45,18 +48,23 @@ fun MainScreen(mainActivity: MainActivity) {
     val mapViewModel = remember { MapViewModel(application, coroutineScope, sharedPreferences) }
     val baseMapsViewModel = remember { BaseMapsViewModel(application) }
 
-    val selectedProperty = mapViewModel.selectedProperty.collectAsState()
     val searchViewModel = remember { SearchViewModel() }
     val selectedPanel = remember { mutableStateOf(Panels.NONE) }
-    val locationEnabled = mapViewModel.locationEnabled.collectAsState()
+    val locationEnabled by mapViewModel.locationEnabled.collectAsState()
 
     val popupViews by mapViewModel.popupViews.collectAsState()
     val isLoaded by mapViewModel.isLoaded.collectAsState()
 
+    val darkMode by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect (darkMode) {
+        if (bottomSheetState.isVisible) {
+            bottomSheetState.hide()
 
-    if (selectedProperty.value != null) {
-        Log.i("map press", selectedProperty.value?.attributes.toString())
+        }
+
     }
+
+
     LaunchedEffect(Unit) {
         mapViewModel.selectedProperty.collect {
             if (mapViewModel.selectedProperty.value != null) {
@@ -76,9 +84,8 @@ fun MainScreen(mainActivity: MainActivity) {
 
     }
 
-    LaunchedEffect(locationEnabled.value) {
-        Log.i("test", locationEnabled.value.toString())
-        if (locationEnabled.value) {
+    LaunchedEffect(locationEnabled) {
+        if (locationEnabled) {
             mapViewModel.displayLocation(context, mainActivity)
         } else {
             mapViewModel.stopDisplayingLocation()
@@ -103,10 +110,12 @@ fun MainScreen(mainActivity: MainActivity) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
 
         ) {
             MapView(
                 modifier = Modifier.fillMaxSize(),
+                backgroundGrid = BackgroundGrid(Color.transparent),
                 arcGISMap = mapViewModel.map,
                 mapViewProxy = mapViewModel.mapViewProxy,
                 onViewpointChangedForCenterAndScale = { viewpoint: Viewpoint ->
@@ -148,7 +157,7 @@ fun MainScreen(mainActivity: MainActivity) {
                 Icon(
                     Icons.Filled.MyLocation,
                     contentDescription = "display location",
-                    tint = MaterialTheme.colorScheme.onBackground
+                    tint = if (locationEnabled) { MaterialTheme.colorScheme.primary } else {MaterialTheme.colorScheme.onBackground }
                 )
             }
             FloatingActionButton(

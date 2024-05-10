@@ -28,7 +28,8 @@ fun PropertyInfo(
     mapViewModel: MapViewModel,
     bottomSheetState: HideableBottomSheetState,
     navController: NavController,
-    showServices: () -> Unit
+    showServices: () -> Unit,
+    showDeed: (String) -> Unit
 ) {
     val coroutineScope = rememberCoroutineScope()
 
@@ -66,7 +67,7 @@ fun PropertyInfo(
                 OwnerInfo(selectedProperty = selectedProperty)
                 ValuationInfo(selectedProperty = selectedProperty)
                 SaleInfo(selectedProperty = selectedProperty)
-                DeedInfo(selectedProperty = selectedProperty, mapViewModel = mapViewModel)
+                DeedInfo(selectedProperty = selectedProperty, mapViewModel = mapViewModel, showDeed = showDeed)
                 BuildingInfo(selectedProperty = selectedProperty)
                 Button(
                     onClick = {

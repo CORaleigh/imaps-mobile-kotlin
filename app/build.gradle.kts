@@ -13,7 +13,7 @@ android {
         applicationId = "com.raleighnc.imapsmobile"
         minSdk = 26
         targetSdk = 34
-        versionCode = 2
+        versionCode = 5
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -55,6 +55,7 @@ android {
 
 
 }
+
 dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
@@ -86,4 +87,6 @@ dependencies {
     implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.navigation:navigation-compose:2.7.7")
     implementation("com.github.ireward:compose-html:1.0.2")
+    implementation("io.github.grizzi91:bouquet:1.1.2")
+
 }

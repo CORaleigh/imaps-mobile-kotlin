@@ -98,6 +98,7 @@ data class Field(
 data class Attributes(
     val OWNER: String? = null,
     val SITE_ADDRESS: String? = null,
+    val ADDRESS: String? = null,
     val FULL_STREET_NAME: String? = null,
     val REID: String? = null,
     val PIN_NUM: String? = null
@@ -107,6 +108,7 @@ operator fun Attributes.get(field: String): Any? {
     return when (field) {
         "OWNER" -> OWNER
         "SITE_ADDRESS" -> SITE_ADDRESS
+        "ADDRESS" -> ADDRESS
         "FULL_STREET_NAME" -> FULL_STREET_NAME
         "REID" -> REID
         "PIN_NUM" -> PIN_NUM
@@ -118,6 +120,7 @@ fun getTitle(field: String): String {
     return when (field) {
         "OWNER" -> "Owner"
         "SITE_ADDRESS" -> "Address"
+        "ADDRESS" -> "Address"
         "FULL_STREET_NAME" -> "Street Name"
         "REID" -> "REID"
         "PIN_NUM" -> "PIN Number"

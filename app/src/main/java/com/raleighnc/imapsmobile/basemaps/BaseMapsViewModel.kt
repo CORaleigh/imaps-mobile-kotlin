@@ -75,7 +75,7 @@ class BaseMapsViewModel(
             }
             _maps.value = basemaps
         }.onFailure {
-            Log.i("portal error", "Error loading portal items: ${it.message}")
+            Log.e("portal error", "Error loading portal items: ${it.message}")
         }
     }
 
@@ -87,7 +87,7 @@ class BaseMapsViewModel(
         portalGroup.load().onSuccess {
             getMaps(portalGroup)
         }.onFailure {
-            Log.i("portal error", "Error loading portal group: ${it.message}")
+            Log.e("portal error", "Error loading portal group: ${it.message}")
         }
     }
 
@@ -101,7 +101,7 @@ class BaseMapsViewModel(
         getPortalGroup(id)
     }
 
-    suspend fun mapExtentUpdated(viewpoint: Viewpoint) {
+    fun mapExtentUpdated(viewpoint: Viewpoint) {
         val boundary = createPolygon()
         if (boundary != null) {
             _inRaleigh.value = GeometryEngine.intersects(boundary, viewpoint.targetGeometry)

@@ -2,7 +2,6 @@ package com.raleighnc.imapsmobile.layers
 
 import android.app.Application
 import android.content.Context
-import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.clickable
@@ -18,9 +17,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Clear
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -101,7 +99,7 @@ fun LayerList(
                                 if (it.isEmpty()) {
                                     expandedLayers.removeAll(expandedLayers)
                                 } else {
-                                    expandAllLayers(mapViewModel.map, expandedLayers) {
+                                    expandAllLayers(mapViewModel.map) {
                                         expandedLayers.add(it)
                                     }
                                 }
@@ -217,14 +215,14 @@ fun SubLayer(
                     }) {
                         if (expandedLayers.contains(layer)) {
                             Icon(
-                                Icons.Filled.KeyboardArrowDown,
+                                Icons.AutoMirrored.Filled.KeyboardArrowRight,
                                 contentDescription = "Expanded",
                                 tint = MaterialTheme.colorScheme.onSurface
                             )
 
                         } else {
                             Icon(
-                                Icons.Filled.KeyboardArrowRight,
+                                Icons.AutoMirrored.Filled.KeyboardArrowRight,
                                 contentDescription = "Collapsed",
                                 tint = MaterialTheme.colorScheme.onSurface
                             )
@@ -252,7 +250,6 @@ fun SubLayer(
                             if (sharedPreferences.getString("visibleLayers", "") != null) {
                                 val layersString =
                                     sharedPreferences.getString("visibleLayers", "").toString()
-                                Log.i("test", layersString)
 
                                 val layers = layersString.split(",").toMutableList()
                                 if (!isVisible) {
@@ -279,7 +276,7 @@ fun SubLayer(
                     )
                     IconButton(onClick = { layerClicked.value = layer }) {
                         Icon(
-                            Icons.Filled.KeyboardArrowRight,
+                            Icons.AutoMirrored.Filled.KeyboardArrowRight,
                             contentDescription = "Collapsed",
                             tint = MaterialTheme.colorScheme.onSurface
                         )

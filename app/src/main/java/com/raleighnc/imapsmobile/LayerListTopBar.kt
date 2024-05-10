@@ -2,7 +2,6 @@ package com.raleighnc.imapsmobile
 
 import android.app.Application
 import android.content.Context
-import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,8 +10,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.DropdownMenu
@@ -22,6 +21,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -83,18 +83,20 @@ fun LayerListTopBar(
     },
         navigationIcon = {
             if (navController?.previousBackStackEntry != null) {
-                Log.i("previousBackStackEntry", navController.previousBackStackEntry.toString())
                 IconButton(onClick = {
                     navController.popBackStack()
                 }) {
                     Icon(
-                        imageVector = Icons.Filled.KeyboardArrowLeft,
+                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
                         contentDescription = "Localized description"
                     )
                 }
             }
 
         },
+        colors =  TopAppBarDefaults.centerAlignedTopAppBarColors(
+            containerColor = MaterialTheme.colorScheme.background
+        ),
         actions = {
             IconButton(onClick = { menuExpanded = !menuExpanded }) {
                 Icon(
@@ -113,7 +115,7 @@ fun LayerListTopBar(
                         Text("Expand Layers")
                     },
                     onClick = {
-                        expandAllLayers(mapViewModel.map, expandedLayers, addExpandedLayer)
+                        expandAllLayers(mapViewModel.map, addExpandedLayer)
                         menuExpanded = false
 
                     },
@@ -157,7 +159,6 @@ fun LayerListTopBar(
 
 fun expandAllLayers(
     map: ArcGISMap,
-    expandedLayers: MutableList<Layer>,
     addExpandedLayer: (Layer) -> Unit
 ) {
     fun expandLayer(layer: Layer) {

@@ -1,5 +1,6 @@
 package com.raleighnc.imapsmobile
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -19,8 +20,15 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.arcgismaps.mapping.popup.FieldsPopupElement
@@ -84,23 +92,48 @@ fun ServicesView(
                 items(popupViews) { popupView ->
                     Text(
                         popupView.title,
-                        style = MaterialTheme.typography.titleLarge
+                        style = TextStyle(
+                            fontFamily = FontFamily.Default,
+                            fontWeight = FontWeight.Normal,
+                            fontSize = 22.sp,
+                            lineHeight = 28.sp,
+                            letterSpacing = 0.sp,
+                            color = MaterialTheme.colorScheme.onBackground,
+                            textAlign = TextAlign.Center
+                        ),
+                        modifier = Modifier.fillMaxWidth()
                     )
                     popupView.popupElements.forEach { element ->
                         if (element is FieldsPopupElement) {
                             element.labels.forEachIndexed { index, label ->
-                                Row(
-                                    modifier = Modifier
-                                        .padding(10.dp)
-                                        .fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Text(text = label, modifier = Modifier.weight(1f))
-                                    Text(
-                                        text = element.formattedValues.get(index),
-                                        modifier = Modifier.weight(1f)
-                                    )
+                                if (element.fields[index].isVisible) {
+                                    Row(
+                                        modifier = Modifier
+                                            .padding(10.dp)
+                                            .fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Text(text = label, modifier = Modifier.weight(1f))
+                                        if (element.formattedValues[index].startsWith("https://")) {
+                                            Text(
+                                                text = "View",
+                                                modifier = Modifier
+                                                    .weight(1f)
+                                                    .clickable {
+                                                        uriHandler.openUri(element.formattedValues[index])
+                                                    },
+                                                style = TextStyle(MaterialTheme.colorScheme.primary, textDecoration = TextDecoration.Underline)
+                                            )
+                                        } else {
+                                            Text(
+                                                text = element.formattedValues[index],
+                                                modifier = Modifier.weight(1f)
+                                            )
+                                        }
+
+                                    }
                                 }
+
                             }
                         }
                         if (element is MediaPopupElement) {
@@ -108,14 +141,25 @@ fun ServicesView(
                                 if (media.type == PopupMediaType.Image) {
                                     AsyncImage(
                                         model = media.value?.sourceUrl,
-                                        contentDescription = media.title
+                                        contentDescription = media.title,
+                                        contentScale = ContentScale.FillWidth,
+                                        modifier = Modifier.fillMaxWidth(),
                                     )
                                 }
                             }
                         }
                         if (element is TextPopupElement) {
+                            Spacer(modifier = Modifier.height(6.dp))
                             HtmlText(text = element.text,
-                                style = MaterialTheme.typography.bodyLarge,
+                                modifier = Modifier.padding(10.dp).fillMaxWidth(),
+                                style = TextStyle(
+                                    fontFamily = FontFamily.Default,
+                                    fontWeight = FontWeight.Normal,
+                                    fontSize = 16.sp,
+                                    lineHeight = 24.sp,
+                                    letterSpacing = 0.5.sp,
+                                    textAlign = TextAlign.Center,
+                                    color = MaterialTheme.colorScheme.onBackground),
                                 linkClicked = { url ->
                                     uriHandler.openUri(url)
 

@@ -1,7 +1,6 @@
 package com.raleighnc.imapsmobile.layers
 
 import android.graphics.drawable.BitmapDrawable
-import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -33,7 +32,6 @@ fun LayerInfo(layer: Layer) {
     val swatches = remember { mutableListOf<LegendSwatch>() }
     var sliderPosition by remember { mutableFloatStateOf(layer.opacity) }
     layer.opacity = sliderPosition
-    Log.i("test", swatches.count().toString())
     LaunchedEffect(layer) {
         coroutineScope.launch {
             layer.fetchLegendInfos().onSuccess { infos ->

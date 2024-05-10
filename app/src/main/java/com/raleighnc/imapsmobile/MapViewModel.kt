@@ -11,9 +11,6 @@ import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.AndroidViewModel
-import com.arcgismaps.arcade.ArcadeEvaluator
-import com.arcgismaps.arcade.ArcadeExpression
-import com.arcgismaps.arcade.ArcadeProfile
 import com.arcgismaps.data.ArcGISFeature
 import com.arcgismaps.data.Feature
 import com.arcgismaps.data.FeatureQueryResult
@@ -22,6 +19,8 @@ import com.arcgismaps.data.QueryFeatureFields
 import com.arcgismaps.data.QueryParameters
 import com.arcgismaps.data.ServiceFeatureTable
 import com.arcgismaps.geometry.Geometry
+import com.arcgismaps.geometry.Point
+import com.arcgismaps.geometry.SpatialReference
 import com.arcgismaps.location.LocationDisplayAutoPanMode
 import com.arcgismaps.mapping.ArcGISMap
 import com.arcgismaps.mapping.BasemapStyle
@@ -74,7 +73,7 @@ class MapViewModel(
 
     init {
         val portalItem = PortalItem(
-            Portal("https://www.arcgis.com"), "95092428774c4b1fb6a3b6f5fed9fbc4"
+            Portal("https://www.arcgis.com"), "46c1f4b90df34dff8f01a12abede4ea9"//"95092428774c4b1fb6a3b6f5fed9fbc4"
         )
         map = ArcGISMap(portalItem)
 
@@ -83,8 +82,11 @@ class MapViewModel(
                 if (sharedPreferences.getString("viewpoint", "DEFAULT") != null) {
                     val viewpointJson =
                         sharedPreferences.getString("viewpoint", "DEFAULT").toString()
-                    val viewpoint: Viewpoint? = Viewpoint.fromJsonOrNull(viewpointJson)
+                    var viewpoint: Viewpoint? = Viewpoint.fromJsonOrNull(viewpointJson)
                     if (viewpoint != null) {
+                        mapViewProxy.setViewpoint(viewpoint)
+                    } else {
+                        viewpoint = Viewpoint(center = Point(-78.7,35.8, spatialReference = SpatialReference(4326)), scale = 500000.0)
                         mapViewProxy.setViewpoint(viewpoint)
                     }
                 }
@@ -99,16 +101,32 @@ class MapViewModel(
     suspend fun getCondo(field: String, value: Any?) {
         sampleCoroutineScope.launch {
             val table = map.tables.find { it.displayName == "Condos" }
+            val params = QueryParameters()
+            params.whereClause = "$field = '$value'"
+
+            if (field == "ADDRESS") {
+                val addressTable = map.tables.find { it.displayName == "Addresses" }
+
+                val addressParams = QueryParameters()
+                addressParams.whereClause = "ADDRESS = '$value'"
+
+                val addressResult = (addressTable as ServiceFeatureTable).queryFeatures(addressParams, QueryFeatureFields.LoadAll).getOrElse { Log.e("test", it.message.toString()) } as FeatureQueryResult
+                val reids = addressResult.map { it.attributes["REA_REID"] } as List<String>
+                params.whereClause = reids.joinToString(separator = ", ", prefix = "REID in (", postfix = ")") { "\'$it\'" }
+
+            }
             if (table != null) {
-                var params = QueryParameters()
-                params.whereClause = "$field = '$value'"
-                if (field == "PIN_NUM") {
-                    params.orderByFields.add(OrderBy("PIN_NUM"))
-                    params.orderByFields.add(OrderBy("PIN_EXT"))
-                } else if (field == "FULL_STREET_NAME") {
-                    params.orderByFields.add(OrderBy("SITE_ADDRESS"))
-                } else {
-                    params.orderByFields.add(OrderBy(field))
+                when (field) {
+                    "PIN_NUM" -> {
+                        params.orderByFields.add(OrderBy("PIN_NUM"))
+                        params.orderByFields.add(OrderBy("PIN_EXT"))
+                    }
+                    "FULL_STREET_NAME", "ADDRESS" -> {
+                        params.orderByFields.add(OrderBy("SITE_ADDRESS"))
+                    }
+                    else -> {
+                        params.orderByFields.add(OrderBy(field))
+                    }
                 }
                 val featureQueryResult =
                     (table as ServiceFeatureTable).queryFeatures(params, QueryFeatureFields.LoadAll)
@@ -117,8 +135,6 @@ class MapViewModel(
                         } as FeatureQueryResult
                 val featureResultList = featureQueryResult.toList()
                 if (featureResultList.isNotEmpty()) {
-                    Log.i("test", featureResultList.count().toString())
-
                     if (featureResultList.count() == 1) {
                         val condoFeature = featureResultList.first()
                         selectProperty(condoFeature as ArcGISFeature)
@@ -152,7 +168,6 @@ class MapViewModel(
                 if (featureResultList.count() == 1) {
                     val condoFeature = featureResultList.first()
                     selectProperty(condoFeature as ArcGISFeature)
-                    Log.i("feature table", condoFeature.attributes.toString())
                 } else if (featureResultList.count() > 1) {
                     selectProperties(featureResultList)
 
@@ -183,7 +198,7 @@ class MapViewModel(
                 QueryFeatureFields.LoadAll
             )
                 .getOrElse {
-                    Log.i("data error", it.cause.toString())
+                    Log.e("data error", it.cause.toString())
                 } as FeatureQueryResult
 
         val featureResultList = featureQueryResult.toList()
@@ -203,7 +218,7 @@ class MapViewModel(
         }
     }
 
-    private suspend fun getPropertyByGeometry(mapPoint: com.arcgismaps.geometry.Point?) {
+    private suspend fun getPropertyByGeometry(mapPoint: Point?) {
         val group = map.operationalLayers.find { it.name == "Property" }
 
         if (group != null) {
@@ -217,7 +232,7 @@ class MapViewModel(
         }
     }
 
-    suspend fun onMapLongPress(mapPoint: com.arcgismaps.geometry.Point?) {
+    suspend fun onMapLongPress(mapPoint: Point?) {
         if (mapPoint != null) {
             getPropertyByGeometry(mapPoint)
         }
@@ -254,58 +269,48 @@ class MapViewModel(
     }
 
     suspend fun onSingleTap(screenCoordinate: ScreenCoordinate) {
-        Log.i("pservices", "test " + screenCoordinate.toString())
         _popupViews.value = emptyList()
         mapViewProxy.identifyLayers(
             screenCoordinate = screenCoordinate,
-            tolerance = 100.dp,
-            returnPopupsOnly = false
+            tolerance = 5.dp,
+            returnPopupsOnly = false,
+            maximumResults = null
         ).onSuccess { results ->
             results.forEach { result ->
-                if (result.layerContent.name != "Property") {
+                if (result.layerContent.name != "Property1") {
                     result.popups.forEach { popup ->
                         try {
-                            if (result.layerContent.name == "Property") {
-                                popup.popupDefinition.expressions.removeAt(0)
-                                popup.popupDefinition.expressions.removeAt(0)
-                                popup.popupDefinition.expressions.removeAt(0)
-                            }
-
-
                             popup.evaluateExpressions().onSuccess {
-                                Log.i("test", "test")
                                 _popupViews.value += PopupView(
                                     popup.title,
                                     popup.evaluatedElements,
                                     result.layerContent as Layer
                                 )
+
                                 //_popupElements.value = popup.evaluatedElements
                             }.onFailure { exception ->
-                                Log.i("test", "test")
+                                Log.e("popup error", exception.message.toString())
 
                             }
                         } catch (e: Exception) {
-                            Log.i("test", e.message.toString())
-
+                            Log.e("popup error", e.message.toString())
                         }
-
                     }
                 }
 //                else  {
-                result.popups.forEach { popup ->
-                    popup.popupDefinition.expressions.forEach { expression ->
-                        Log.i("test", expression.expression)
-                        val arcadeExpression = ArcadeExpression(expression.expression)
-                        val arcadeEvaluator =
-                            ArcadeEvaluator(arcadeExpression, ArcadeProfile.PopupElement)
-                        val profileVariables = mapOf<String, Any>("\$feature" to popup.geoElement)
-                        val evaluationResult =
-                            arcadeEvaluator.evaluate(profileVariables).onSuccess {
-                                Log.i("test", it.result as String)
-                            }
-
-                    }
-                }
+//                result.popups.forEach { popup ->
+//                    popup.popupDefinition.expressions.forEach { expression ->
+//                        val arcadeExpression = ArcadeExpression(expression.expression)
+//                        val arcadeEvaluator =
+//                            ArcadeEvaluator(arcadeExpression, ArcadeProfile.PopupElement)
+//                        val profileVariables = mapOf<String, Any>("\$feature" to popup.geoElement)
+//                        val evaluationResult =
+//                            arcadeEvaluator.evaluate(profileVariables).onSuccess {
+//                                Log.i("test", it.result as String)
+//                            }
+//
+//                    }
+//                }
 //                }
 
             }

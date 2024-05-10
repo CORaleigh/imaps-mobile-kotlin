@@ -1,5 +1,6 @@
 package com.raleighnc.imapsmobile.search
 
+import PdfViewer
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -49,9 +50,9 @@ fun SearchScreen(
     val results by searchViewModel.results.collectAsState()
     val selectedProperty by mapViewModel.selectedProperty.collectAsState()
     val selectedProperties by mapViewModel.selectedProperties.collectAsState()
-    var servicesViewModel = ServicesViewModel(mapViewModel)
+    val servicesViewModel = ServicesViewModel(mapViewModel)
     val navController = rememberNavController()
-
+    var webUrl = ""
     if (selectedProperty != null) {
         LaunchedEffect(selectedProperty) {
             coroutineScope.launch {
@@ -83,8 +84,8 @@ fun SearchScreen(
                         if (it.isNotEmpty()) {
                             searchViewModel.getData(1, "OWNER", searchText.uppercase(Locale.ROOT))
                             searchViewModel.getData(
-                                1,
-                                "SITE_ADDRESS",
+                                4,
+                                "ADDRESS",
                                 searchText.uppercase(Locale.ROOT)
                             )
                             searchViewModel.getData(1, "PIN_NUM", searchText.uppercase(Locale.ROOT))
@@ -151,12 +152,16 @@ fun SearchScreen(
                     navController = navController,
                     showServices = {
                         navController.navigate(Screens.SERVICES.name)
+                    },
+                    showDeed = {url ->
+                        webUrl = url
+                        navController.navigate(Screens.DEED.name)
                     }
                 )
             }
         }
         composable(Screens.PROPERTYLIST.name) {
-            selectedProperties?.let {
+            selectedProperties.let {
                 PropertyList(
                     mapViewModel = mapViewModel,
                     bottomSheetState = bottomSheetState,
@@ -167,6 +172,9 @@ fun SearchScreen(
         composable(Screens.SERVICES.name) {
             ServicesView(mapViewModel, servicesViewModel, bottomSheetState, navController)
         }
+        composable(Screens.DEED.name) {
+            PdfViewer(url = webUrl, bottomSheetState, navController)
+        }
     }
 }
 
@@ -174,6 +182,7 @@ enum class Screens {
     SEARCH,
     PROPERTYLIST,
     PROPERTYINFO,
-    SERVICES
+    SERVICES,
+    DEED
 }
 

@@ -17,7 +17,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.arcgismaps.data.ArcGISFeature
@@ -33,9 +32,9 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
 @Composable
-fun DeedInfo(selectedProperty: ArcGISFeature, mapViewModel: MapViewModel) {
+fun DeedInfo(selectedProperty: ArcGISFeature, mapViewModel: MapViewModel,
+             showDeed: (String) -> Unit) {
     val coroutineScope = rememberCoroutineScope()
-    val uriHandler = LocalUriHandler.current
     val formatter = DecimalFormat("#,##0.00")
     val dateSource = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'")
     val dateInstance = DateTimeFormatter.ofPattern("MM/dd/yyyy")
@@ -55,10 +54,8 @@ fun DeedInfo(selectedProperty: ArcGISFeature, mapViewModel: MapViewModel) {
 
     LaunchedEffect(selectedProperty) {
         coroutineScope.launch {
-            Log.i("feature table", "DEEDS")
 
             deed.value = getDeeds(condoFeature = selectedProperty, mapViewModel = mapViewModel)
-            Log.i("feature table", deed.value?.attributes.toString())
         }
     }
 
@@ -158,7 +155,6 @@ fun DeedInfo(selectedProperty: ArcGISFeature, mapViewModel: MapViewModel) {
             modifier = Modifier.weight(2f)
         )
     }
-    Log.i("feature table", deed.value?.attributes.toString())
     if (deed.value != null) {
 
         val deedDoc = deed.value?.attributes?.get("DEED_DOC_NUM")?.toString().orEmpty()
@@ -172,7 +168,9 @@ fun DeedInfo(selectedProperty: ArcGISFeature, mapViewModel: MapViewModel) {
             if (deedDoc != "") {
                 Button(
                     onClick = {
-                        uriHandler.openUri("https://rodcrpi.wakegov.com/booksweb/pdfview.aspx?docid=${bomDoc}&RecordDate=")
+                        showDeed("https://rodcrpi.wakegov.com/booksweb/pdfview.aspx?docid=${deedDoc}&RecordDate=")
+
+                        //uriHandler.openUri("https://rodcrpi.wakegov.com/booksweb/pdfview.aspx?docid=${bomDoc}&RecordDate=")
                     }, modifier = Modifier
                         .weight(1f)
                         .padding(5.dp)
@@ -183,7 +181,9 @@ fun DeedInfo(selectedProperty: ArcGISFeature, mapViewModel: MapViewModel) {
             if (bomDoc != "") {
                 Button(
                     onClick = {
-                        uriHandler.openUri("https://rodcrpi.wakegov.com/booksweb/pdfview.aspx?docid=${bomDoc}&RecordDate=")
+                        showDeed("https://rodcrpi.wakegov.com/booksweb/pdfview.aspx?docid=${bomDoc}&RecordDate=")
+
+                        //uriHandler.openUri("https://rodcrpi.wakegov.com/booksweb/pdfview.aspx?docid=${bomDoc}&RecordDate=")
                     }, modifier = Modifier
                         .weight(1f)
                         .padding(5.dp)
@@ -206,19 +206,16 @@ private suspend fun getDeeds(condoFeature: Feature, mapViewModel: MapViewModel):
             whereClause = "REID = '" + condoFeature.attributes["REID"].toString() + "'"
             returnGeometry = false
         }
-        Log.i("feature table", queryParameters.whereClause)
         val featureQueryResult = (table as ServiceFeatureTable).queryFeatures(
             queryParameters,
             QueryFeatureFields.LoadAll
         ).getOrElse {
             Log.e("data error", it.cause.toString())
         }
-        Log.i("feature table", featureQueryResult.toString())
         if (featureQueryResult is FeatureQueryResult) {
             val featureResultList = featureQueryResult.toList()
             if (featureResultList.isNotEmpty()) {
                 val deedFeature = featureResultList.first()
-                Log.i("feature table", condoFeature.attributes.toString())
                 return deedFeature
             }
         } else {

@@ -1,7 +1,6 @@
 package com.raleighnc.imapsmobile.basemaps
 
 import android.annotation.SuppressLint
-import android.util.Log
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -176,7 +175,6 @@ fun BasemapList(
                         .height(170.dp)
                         .padding(6.dp),
                     onClick = {
-                        Log.i("test", item.title)
                         coroutineScope.launch {
                             baseMapsViewModel.changeBasemap(item, mapViewModel.map)
                         }

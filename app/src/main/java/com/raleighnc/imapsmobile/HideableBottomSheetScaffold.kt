@@ -14,6 +14,8 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
@@ -26,26 +28,28 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import kotlin.math.roundToInt
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun HideableBottomSheetScaffold(
     bottomSheetState: HideableBottomSheetState,
     bottomSheetContent: @Composable BoxScope.() -> Unit,
     modifier: Modifier = Modifier,
     sheetShape: Shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
-    x: Color = MaterialTheme.colorScheme.background,
     content: @Composable ColumnScope.() -> Unit,
 ) {
+    val screenWidth = LocalConfiguration.current.screenWidthDp
+
     var layoutHeight by remember { mutableIntStateOf(0) }
     var sheetHeight by remember { mutableIntStateOf(0) }
     val bottomSheetNestedScrollConnection = remember(bottomSheetState.draggableState) {
@@ -63,7 +67,7 @@ fun HideableBottomSheetScaffold(
 
     Box(
         modifier = modifier
-            .fillMaxSize()
+            .width(100.dp)
             .onSizeChanged {
                 layoutHeight = it.height
                 if (layoutHeight > 0 && sheetHeight > 0) {
@@ -74,15 +78,18 @@ fun HideableBottomSheetScaffold(
         Column(modifier = Modifier.fillMaxSize()) {
             content()
         }
+        val offset = if (screenWidth >= 500) { 30 } else { 0 }
+        val align = if (screenWidth >= 500) { Alignment.BottomStart } else { Alignment.BottomCenter }
+
         Box(
             modifier = Modifier
-                .fillMaxSize()
-                .align(Alignment.BottomCenter)
+                .widthIn(max = 500.dp)
+                .align(align)
                 .offset {
                     val yOffset = bottomSheetState
                         .requireOffset()
                         .roundToInt()
-                    IntOffset(x = 0, y = yOffset)
+                    IntOffset(x = offset, y = yOffset)
                 }
                 .anchoredDraggable(
                     state = bottomSheetState.draggableState,

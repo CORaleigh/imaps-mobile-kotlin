@@ -38,7 +38,6 @@ fun PropertyPhotos(selectedProperty: ArcGISFeature, mapViewModel: MapViewModel) 
         photos.value.reversed().forEach {
             val dir = it.attributes["IMAGEDIR"]
             val name = it.attributes["IMAGENAME"]
-            Log.i("photo", it.attributes.toString())
             val url = "https://services.wake.gov/realestate/photos/mvideo/${dir}/${name}"
             AsyncImage(
                 model = url,
@@ -61,7 +60,6 @@ private suspend fun getPhotos(condoFeature: Feature, mapViewModel: MapViewModel)
             whereClause = "PARCEL = '" + condoFeature.attributes["REID"].toString() + "'"
             returnGeometry = false
         }
-        Log.i("feature table", queryParameters.whereClause)
         val featureQueryResult =
             (table as ServiceFeatureTable).queryFeatures(
                 queryParameters,
@@ -70,7 +68,6 @@ private suspend fun getPhotos(condoFeature: Feature, mapViewModel: MapViewModel)
                 .getOrElse {
                     Log.e("data error", it.cause.toString())
                 }
-        Log.i("feature table", featureQueryResult.toString())
         if (featureQueryResult is FeatureQueryResult) {
             return featureQueryResult.toList()
 

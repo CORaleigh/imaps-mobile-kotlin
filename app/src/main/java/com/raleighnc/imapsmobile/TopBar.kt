@@ -8,14 +8,15 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.KeyboardArrowLeft
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -40,8 +41,7 @@ fun TopBar(
             Box(
                 modifier = Modifier
                     .size(30.dp, 5.dp)
-                    .background(Color.Transparent)
-                    .background(Color.Transparent, shape = RoundedCornerShape(5.dp))
+                    .background(Color.LightGray, shape = RoundedCornerShape(5.dp))
             )
             Spacer(
                 modifier = Modifier
@@ -56,7 +56,7 @@ fun TopBar(
         navigationIcon = {
             if (navController?.previousBackStackEntry != null) {
                 IconButton(onClick = {
-                    if (navController.previousBackStackEntry?.destination?.route == "PROPERTYINFO" && navController.currentDestination?.route != "SERVICES") {
+                    if (navController.previousBackStackEntry?.destination?.route == "PROPERTYINFO" && navController.currentDestination?.route != "SERVICES" && navController.currentDestination?.route != "DEED") {
                         navController.navigate("SEARCH")
                     } else {
                         navController.popBackStack()
@@ -64,7 +64,7 @@ fun TopBar(
 
                 }) {
                     Icon(
-                        imageVector = Icons.Filled.KeyboardArrowLeft,
+                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
                         contentDescription = "Localized description"
                     )
                 }
@@ -79,6 +79,9 @@ fun TopBar(
             }) {
                 Icon(Icons.Filled.Close, contentDescription = "Close")
             }
-        }
+        },
+        colors =  TopAppBarDefaults.centerAlignedTopAppBarColors(
+            containerColor = MaterialTheme.colorScheme.background
+        )
     )
 }
