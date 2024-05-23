@@ -99,7 +99,8 @@ class ServicesViewModel(mapViewModel: MapViewModel) {
                         _popupViews.value += PopupView(
                             popup.title,
                             popup.evaluatedElements,
-                            layer as Layer
+                            layer,
+                            result
                         )
                     }
                 }

@@ -23,6 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.unit.dp
+import com.arcgismaps.mapping.layers.ArcGISMapImageLayer
 import com.arcgismaps.mapping.layers.Layer
 import kotlinx.coroutines.launch
 
@@ -30,22 +31,44 @@ import kotlinx.coroutines.launch
 fun LayerInfo(layer: Layer) {
     val coroutineScope = rememberCoroutineScope()
     val swatches = remember { mutableListOf<LegendSwatch>() }
+    val legendItems = remember { mutableListOf<LegendItem>() }
     var sliderPosition by remember { mutableFloatStateOf(layer.opacity) }
     layer.opacity = sliderPosition
     LaunchedEffect(layer) {
         coroutineScope.launch {
-            layer.fetchLegendInfos().onSuccess { infos ->
-                infos.forEach { info ->
-                    info.symbol?.createSwatch(screenScale = 4.0F)?.onSuccess { swatch ->
-                        var label = info.name
-                        if (label == "") {
-                            label = layer.name
+            legendItems.removeAll(legendItems)
+            if (layer is ArcGISMapImageLayer) {
+                for (sublayer in layer.mapImageSublayers) {
+                    val legendItem = LegendItem(sublayer.name, emptyList())
+                    sublayer.fetchLegendInfos().onSuccess { infos ->
+                        infos.forEach { info ->
+                            info.symbol?.createSwatch(screenScale = 4.0F)?.onSuccess { swatch ->
+                                val label = info.name
+                                legendItem.swatches += LegendSwatch(label = label, swatch = swatch)
+                            }
                         }
-                        swatches += LegendSwatch(label = label, swatch = swatch)
+
                     }
+                    legendItems += legendItem
+
                 }
 
+            } else {
+                val legendItem = LegendItem(layer.name, emptyList())
+                layer.fetchLegendInfos().onSuccess { infos ->
+                    infos.forEach { info ->
+                        info.symbol?.createSwatch(screenScale = 4.0F)?.onSuccess { swatch ->
+                            var label = info.name
+                            if (label == "") {
+                                label = layer.name
+                            }
+                            legendItem.swatches += LegendSwatch(label = label, swatch = swatch)
+                        }
+                    }
+                    legendItems += legendItem
+                }
             }
+
         }
     }
     Column(
@@ -60,22 +83,31 @@ fun LayerInfo(layer: Layer) {
             valueRange = 0f..1f
         )
         LazyColumn(modifier = Modifier.fillMaxSize()) {
-            items(swatches) { swatch ->
-                Row {
-                    Image(
-                        bitmap = swatch.swatch.bitmap.asImageBitmap(),
-                        contentDescription = swatch.label,
-                        modifier = Modifier.alpha(sliderPosition)
-                    )
-                    Spacer(modifier = Modifier.width(10.dp))
-                    Text(text = swatch.label)
+            items(legendItems) { item ->
+                Text(text = item.label)
+                for (swatch in item.swatches) {
+                    Row {
+                        Image(
+                            bitmap = swatch.swatch.bitmap.asImageBitmap(),
+                            contentDescription = swatch.label,
+                            modifier = Modifier.alpha(sliderPosition)
+                        )
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Text(text = swatch.label)
+                    }
                 }
+                Spacer(modifier = Modifier.padding(10.dp))
+
 
             }
         }
     }
 }
 
+data class LegendItem(
+    var label: String,
+    var swatches: List<LegendSwatch>
+)
 data class LegendSwatch(
     val label: String,
     val swatch: BitmapDrawable

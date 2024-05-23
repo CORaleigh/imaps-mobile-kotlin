@@ -1,6 +1,7 @@
 package com.raleighnc.imapsmobile
 
 
+import android.util.Log
 import android.view.ViewTreeObserver
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -22,6 +23,7 @@ import com.arcgismaps.data.FeatureTable
 import com.raleighnc.imapsmobile.basemaps.BaseMaps
 import com.raleighnc.imapsmobile.basemaps.BaseMapsViewModel
 import com.raleighnc.imapsmobile.layers.LayerList
+import com.raleighnc.imapsmobile.popups.PopupScreen
 import com.raleighnc.imapsmobile.search.SearchScreen
 import com.raleighnc.imapsmobile.search.SearchViewModel
 
@@ -37,6 +39,7 @@ fun BottomSheet(
     val isSearching by searchViewModel.isSearching.collectAsState()
     val imeState = rememberImeState()
 
+
     LaunchedEffect(key1 = imeState.value) {
         if (imeState.value) {
             bottomSheetState.expand()
@@ -47,6 +50,10 @@ fun BottomSheet(
             bottomSheetState.expand()
         }
     }
+
+
+
+
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
@@ -80,6 +87,7 @@ fun BottomSheet(
                 )
             }
             if (selectedPanel == Panels.POPUP) {
+                Log.i("test", "POPUP")
                 PopupScreen(mapViewModel = mapViewModel, bottomSheetState = bottomSheetState)
             }
         }

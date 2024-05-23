@@ -1,80 +1,91 @@
-package com.raleighnc.imapsmobile
+package com.raleighnc.imapsmobile.popups
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.navigation.NavController
+import com.raleighnc.imapsmobile.HideableBottomSheetState
+import com.raleighnc.imapsmobile.PopupView
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TopBar(
+fun PopupTopBar(
     title: String,
+    selectedPopupView: PopupView?,
+    popupViewCount: Int,
     bottomSheetState: HideableBottomSheetState,
     coroutineScope: CoroutineScope,
-    navController: NavController?
+    returnToList: () -> Unit
 ) {
-    CenterAlignedTopAppBar(title = {
+    CenterAlignedTopAppBar(
+        title = {
         Column(
-            horizontalAlignment = Alignment.CenterHorizontally
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Top
         ) {
-            Box(
-                modifier = Modifier
-                    .size(30.dp, 5.dp)
-                    .background(Color.LightGray, shape = RoundedCornerShape(5.dp))
-            )
+
             Spacer(
                 modifier = Modifier
                     .height(5.dp)
             )
             Text(
                 title,
-                style = MaterialTheme.typography.titleMedium
+                style = MaterialTheme.typography.titleMedium,
+                textAlign = TextAlign.Center
             )
         }
     },
         navigationIcon = {
-            if (navController?.previousBackStackEntry != null) {
-                IconButton(onClick = {
-                    if (navController.previousBackStackEntry?.destination?.route == "PROPERTYINFO" && navController.currentDestination?.route != "SERVICES" && navController.currentDestination?.route != "DEED") {
-                        navController.navigate("SEARCH")
-                    } else {
-                        navController.popBackStack()
-                    }
-
-                }) {
+            if (selectedPopupView != null && popupViewCount > 1) {
+                TextButton(
+                    onClick = { returnToList() },
+                    modifier = Modifier.padding(top = 14.dp)
+                ) {
                     Icon(
-                        imageVector = Icons.Filled.KeyboardArrowLeft,
-                        contentDescription = "Localized description"
+                        imageVector = Icons.Filled.ArrowBack,
+                        contentDescription = "zoom to",
+                        tint = MaterialTheme.colorScheme.onBackground
+                    )
+                    Spacer(modifier = Modifier.size(ButtonDefaults.IconSize))
+                    Text(
+                        "Results",
+                        style = TextStyle(color = MaterialTheme.colorScheme.onBackground)
                     )
                 }
+
             }
 
         },
         actions = {
-            IconButton(onClick = {
+
+            IconButton(
+                modifier = Modifier.padding(top=10.dp),
+                onClick = {
                 coroutineScope.launch {
                     bottomSheetState.hide()
+                    returnToList()
                 }
             }) {
                 Icon(Icons.Filled.Close, contentDescription = "Close")
@@ -84,4 +95,7 @@ fun TopBar(
             containerColor = MaterialTheme.colorScheme.background
         )
     )
+
 }
+
+

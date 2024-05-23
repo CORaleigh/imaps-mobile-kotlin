@@ -73,7 +73,8 @@ fun HideableBottomSheetScaffold(
                 if (layoutHeight > 0 && sheetHeight > 0) {
                     bottomSheetState.updateAnchors(layoutHeight, sheetHeight)
                 }
-            }
+            }                    .nestedScroll(bottomSheetNestedScrollConnection)
+
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
             content()
@@ -114,6 +115,7 @@ fun HideableBottomSheetScaffold(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 private fun ConsumeSwipeWithinBottomSheetBoundsNestedScrollConnection(
     state: AnchoredDraggableState<HideableBottomSheetValue>,
     orientation: Orientation

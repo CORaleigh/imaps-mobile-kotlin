@@ -11,6 +11,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.AndroidViewModel
+import com.arcgismaps.Color
 import com.arcgismaps.data.ArcGISFeature
 import com.arcgismaps.data.Feature
 import com.arcgismaps.data.FeatureQueryResult
@@ -24,17 +25,27 @@ import com.arcgismaps.geometry.SpatialReference
 import com.arcgismaps.location.LocationDisplayAutoPanMode
 import com.arcgismaps.mapping.ArcGISMap
 import com.arcgismaps.mapping.BasemapStyle
+import com.arcgismaps.mapping.GeoElement
 import com.arcgismaps.mapping.PortalItem
 import com.arcgismaps.mapping.Viewpoint
+import com.arcgismaps.mapping.layers.ArcGISMapImageLayer
 import com.arcgismaps.mapping.layers.FeatureLayer
 import com.arcgismaps.mapping.layers.GroupLayer
 import com.arcgismaps.mapping.layers.Layer
+import com.arcgismaps.mapping.popup.Popup
 import com.arcgismaps.mapping.popup.PopupElement
+import com.arcgismaps.mapping.symbology.SimpleFillSymbol
+import com.arcgismaps.mapping.symbology.SimpleFillSymbolStyle
+import com.arcgismaps.mapping.symbology.SimpleLineSymbol
+import com.arcgismaps.mapping.symbology.SimpleLineSymbolStyle
+import com.arcgismaps.mapping.view.Graphic
+import com.arcgismaps.mapping.view.GraphicsOverlay
 import com.arcgismaps.mapping.view.LocationDisplay
 import com.arcgismaps.mapping.view.ScreenCoordinate
 import com.arcgismaps.portal.Portal
 import com.arcgismaps.toolkit.geoviewcompose.MapViewProxy
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
@@ -71,9 +82,12 @@ class MapViewModel(
     private val _selectedGeometry = MutableStateFlow<Geometry?>(null)
     val selectedGeometry = _selectedGeometry.asStateFlow()
 
+
+    private var _graphics = MutableStateFlow<List<GraphicsOverlay>>(emptyList())
+    val graphics = _graphics.asStateFlow()
     init {
         val portalItem = PortalItem(
-            Portal("https://www.arcgis.com"), "46c1f4b90df34dff8f01a12abede4ea9"//"95092428774c4b1fb6a3b6f5fed9fbc4"
+            Portal("https://www.arcgis.com"), "95092428774c4b1fb6a3b6f5fed9fbc4"//"95092428774c4b1fb6a3b6f5fed9fbc4"
         )
         map = ArcGISMap(portalItem)
 
@@ -92,6 +106,8 @@ class MapViewModel(
                 }
                 _isLoaded.value = true
                 setLayerVisibility(map)
+                delay(2000)
+                resetMapImageLayer(map)
 
             }
         }
@@ -202,19 +218,21 @@ class MapViewModel(
                 } as FeatureQueryResult
 
         val featureResultList = featureQueryResult.toList()
-
+        this._graphics.value = emptyList()
         if (featureResultList.isNotEmpty()) {
             val feature = featureResultList.first()
             if (params.whereClause == "1=1" && params.geometry != null) {
                 getCondoByProperty(feature)
 
             }
-            layer.clearSelection()
-            layer.selectFeature(feature)
-            sampleCoroutineScope.launch {
+            //layer.clearSelection()
+            //layer.selectFeature(feature)
+            //sampleCoroutineScope.launch {
                 _selectedGeometry.value = feature.geometry
                 mapViewProxy.setViewpointGeometry(feature.geometry?.extent as Geometry, 100.0)
-            }
+                //this.graphics.removeAll(this.graphics)
+                this._graphics.value += GraphicsOverlay(graphics = listOf(Graphic(geometry = feature.geometry, attributes = feature.attributes, symbol = SimpleFillSymbol(style = SimpleFillSymbolStyle.Null, outline = SimpleLineSymbol(style = SimpleLineSymbolStyle.Solid, color = Color.red, width = 2.0F)))))
+            //}
         }
     }
 
@@ -243,6 +261,7 @@ class MapViewModel(
     }
 
     private fun selectProperties(features: List<Feature>) {
+        _selectedProperty.value = features.first() as ArcGISFeature
         _selectedProperties.value = features
     }
 
@@ -259,44 +278,70 @@ class MapViewModel(
             } else {
                 if (layer.name != "Property") {
                     layer.isVisible = visibleLayers.any { it == layer.name }
+
                 } else {
                     layer.isVisible = true
                 }
+
             }
         }
 
         map.operationalLayers.forEach(::setVisibility)
     }
 
-    suspend fun onSingleTap(screenCoordinate: ScreenCoordinate) {
-        _popupViews.value = emptyList()
-        mapViewProxy.identifyLayers(
-            screenCoordinate = screenCoordinate,
-            tolerance = 5.dp,
-            returnPopupsOnly = false,
-            maximumResults = null
-        ).onSuccess { results ->
-            results.forEach { result ->
-                if (result.layerContent.name != "Property1") {
-                    result.popups.forEach { popup ->
-                        try {
-                            popup.evaluateExpressions().onSuccess {
-                                _popupViews.value += PopupView(
-                                    popup.title,
-                                    popup.evaluatedElements,
-                                    result.layerContent as Layer
-                                )
+    private fun resetMapImageLayer(map: ArcGISMap) {
 
-                                //_popupElements.value = popup.evaluatedElements
-                            }.onFailure { exception ->
-                                Log.e("popup error", exception.message.toString())
-
-                            }
-                        } catch (e: Exception) {
-                            Log.e("popup error", e.message.toString())
-                        }
+        fun reset(layer: Layer) {
+            if (layer is GroupLayer) {
+                layer.isVisible = true
+                layer.layers.forEach { subLayer ->
+                    reset(subLayer)
+                }
+            } else {
+                if (layer is ArcGISMapImageLayer && layer.name == "Raleigh Stormwater") {
+                    val clonedLayer = layer.clone()
+                    layer.resetSublayers()
+                    layer.mapImageSublayers.forEachIndexed { index, arcGISMapImageSublayer ->
+                        arcGISMapImageSublayer.isPopupEnabled = clonedLayer.mapImageSublayers[index].isPopupEnabled
+                        arcGISMapImageSublayer.popupDefinition = clonedLayer.mapImageSublayers[index].popupDefinition
                     }
                 }
+            }
+        }
+
+        map.operationalLayers.forEach(::reset)
+    }
+
+    suspend fun onSingleTap(screenCoordinate: ScreenCoordinate) {
+        _popupViews.value = emptyList()
+        sampleCoroutineScope.launch {
+
+            mapViewProxy.identifyLayers(
+                screenCoordinate = screenCoordinate,
+                tolerance = 5.dp,
+                returnPopupsOnly = false,
+                maximumResults = 50
+            ).onSuccess { results ->
+                val popups = mutableListOf<PopupItem>()
+                results.forEach { result ->
+                    if (result.layerContent.name != "Property") {
+                        if (result.sublayerResults.isNotEmpty()) {
+                            result.sublayerResults.forEach { sublayerResult ->
+                                sublayerResult.popups.forEach { sublayerPopup ->
+                                    //popups.add(sublayerPopup)
+                                    popups.add(PopupItem(sublayerPopup))
+                                }
+                            }
+
+                        } else {
+                            result.popups.forEach { layerPopup ->
+                                //popups.add(layerPopup)
+                                popups.add(PopupItem(layerPopup, result.layerContent as Layer))
+
+                            }
+                        }
+
+                    }
 //                else  {
 //                result.popups.forEach { popup ->
 //                    popup.popupDefinition.expressions.forEach { expression ->
@@ -313,6 +358,28 @@ class MapViewModel(
 //                }
 //                }
 
+                }
+                val views: MutableList<PopupView> = mutableListOf()
+
+                popups.forEach { popup ->
+                    try {
+                        popup.popup.evaluateExpressions().onSuccess {
+                            views += PopupView(
+                                popup.popup.title,
+                                popup.popup.evaluatedElements,
+                                popup.layer,
+                                popup.popup.geoElement
+                            )
+                            //_popupElements.value = popup.evaluatedElements
+                        }.onFailure { exception ->
+                            Log.e("popup error", exception.message.toString())
+
+                        }
+                    } catch (e: Exception) {
+                        Log.e("popup error", e.message.toString())
+                    }
+                }
+                _popupViews.value = views
             }
         }
     }
@@ -354,5 +421,11 @@ class MapViewModel(
 data class PopupView(
     val title: String,
     val popupElements: List<PopupElement>,
-    val layer: Layer
+    val layer: Layer?,
+    val geoElement: GeoElement
+)
+
+data class PopupItem(
+    val popup: Popup,
+    val layer: Layer? = null
 )

@@ -17,8 +17,9 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -49,10 +50,9 @@ import androidx.navigation.compose.rememberNavController
 import com.arcgismaps.mapping.layers.GroupLayer
 import com.arcgismaps.mapping.layers.Layer
 import com.raleighnc.imapsmobile.HideableBottomSheetState
-import com.raleighnc.imapsmobile.LayerListTopBar
 import com.raleighnc.imapsmobile.MapViewModel
 import com.raleighnc.imapsmobile.TopBar
-import com.raleighnc.imapsmobile.expandAllLayers
+import kotlinx.coroutines.launch
 
 @Composable
 fun LayerList(
@@ -127,7 +127,6 @@ fun LayerList(
                         LazyColumn(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .padding(start = 30.dp, end = 30.dp)
                         ) {
                             item {
                                 for (layer in mapViewModel.map.operationalLayers.reversed()) {
@@ -171,6 +170,8 @@ fun SubLayer(
     expandedLayers: MutableList<Layer>,
     layerSearchText: String
 ) {
+    val coroutineScope = rememberCoroutineScope()
+
     var isExpanded by remember { mutableStateOf(false) }
     isExpanded = expandedLayers.contains(layer)
     var isVisible by remember { mutableStateOf(layer.isVisible) }
@@ -194,6 +195,7 @@ fun SubLayer(
                     } else {
                         isVisible = !isVisible
                         layer.isVisible = isVisible
+
                     }
                 })
         ) {
@@ -203,7 +205,8 @@ fun SubLayer(
                     }.isNotEmpty()) {
                     Text(
                         text = AnnotatedString(layer.name),
-                        style = MaterialTheme.typography.bodyMedium
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier= Modifier.padding(start=20.dp)
                     )
                     IconButton(onClick = {
                         if (expandedLayers.contains(layer)) {
@@ -215,14 +218,14 @@ fun SubLayer(
                     }) {
                         if (expandedLayers.contains(layer)) {
                             Icon(
-                                Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                Icons.Filled.KeyboardArrowDown,
                                 contentDescription = "Expanded",
                                 tint = MaterialTheme.colorScheme.onSurface
                             )
 
                         } else {
                             Icon(
-                                Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                Icons.Filled.KeyboardArrowRight,
                                 contentDescription = "Collapsed",
                                 tint = MaterialTheme.colorScheme.onSurface
                             )
@@ -240,32 +243,37 @@ fun SubLayer(
                         modifier = Modifier
                             .wrapContentWidth(align = Alignment.Start)
                             .weight(1f)
+                            .padding(start = 20.dp)
                     )
                     Spacer(modifier = Modifier.width(16.dp)) // Optional: Add spacing between text components
                     Switch(
                         checked = isVisible, onCheckedChange = {
-                            isVisible = it
-                            layer.isVisible = isVisible
-                            val editor = sharedPreferences.edit()
-                            if (sharedPreferences.getString("visibleLayers", "") != null) {
-                                val layersString =
-                                    sharedPreferences.getString("visibleLayers", "").toString()
+                            coroutineScope.launch {
+                                isVisible = it
+                                layer.isVisible = isVisible
 
-                                val layers = layersString.split(",").toMutableList()
-                                if (!isVisible) {
-                                    layers.remove(layer.name)
+                                val editor = sharedPreferences.edit()
+                                if (sharedPreferences.getString("visibleLayers", "") != null) {
+                                    val layersString =
+                                        sharedPreferences.getString("visibleLayers", "").toString()
+
+                                    val layers = layersString.split(",").toMutableList()
+                                    if (!isVisible) {
+                                        layers.remove(layer.name)
+                                    } else if (!layers.contains(layer.name)) {
+                                        layers.add(layer.name)
+                                    }
+                                    editor.putString(
+                                        "visibleLayers",
+                                        layers.toString().replace("[", "").replace("]", "")
+                                            .replace(", ", ",")
+                                    )
                                 } else {
-                                    layers.add(layer.name)
+                                    editor.putString("visibleLayers", layer.name)
                                 }
-                                editor.putString(
-                                    "visibleLayers",
-                                    layers.toString().replace("[", "").replace("]", "")
-                                        .replace(", ", ",")
-                                )
-                            } else {
-                                editor.putString("visibleLayers", layer.name)
+                                editor.apply()
                             }
-                            editor.apply()
+
 
                         }, colors = SwitchDefaults.colors(
                             checkedThumbColor = MaterialTheme.colorScheme.surface,
@@ -276,8 +284,8 @@ fun SubLayer(
                     )
                     IconButton(onClick = { layerClicked.value = layer }) {
                         Icon(
-                            Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                            contentDescription = "Collapsed",
+                            Icons.Filled.KeyboardArrowRight,
+                            contentDescription = "Layer Details",
                             tint = MaterialTheme.colorScheme.onSurface
                         )
                     }

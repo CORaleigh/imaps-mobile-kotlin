@@ -1,10 +1,18 @@
 package com.raleighnc.imapsmobile.search
 
 import PdfViewer
+import android.app.Application
+import android.content.Context
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -17,9 +25,18 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -34,6 +51,7 @@ import com.raleighnc.imapsmobile.property.PropertyList
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.Json
 import java.util.Locale
 
 
@@ -53,6 +71,22 @@ fun SearchScreen(
     val servicesViewModel = ServicesViewModel(mapViewModel)
     val navController = rememberNavController()
     var webUrl = ""
+    val keyboardController = LocalSoftwareKeyboardController.current
+
+    var isKeyboardShown by remember { mutableStateOf(false) }
+
+    //var isFocused by remember { mutableStateOf(false) }
+
+    val isFocused by searchViewModel.isFocused.collectAsState()
+
+    LaunchedEffect (bottomSheetState.isExpanded) {
+        delay(250)
+        if (!bottomSheetState.isExpanded) {
+            keyboardController?.hide()
+            searchViewModel.toggleSearching()
+        }
+    }
+
     if (selectedProperty != null) {
         LaunchedEffect(selectedProperty) {
             coroutineScope.launch {
@@ -69,6 +103,8 @@ fun SearchScreen(
             }
         }
     }
+
+
 
     NavHost(
         navController = navController,
@@ -114,29 +150,58 @@ fun SearchScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp),
+                        .padding(start = 16.dp, end = 16.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    SearchBar(
-                        query = searchText,
-                        onQueryChange = searchViewModel::onSearchTextChange,
-                        onSearch = searchViewModel::onSearchTextChange,
-                        active = isSearching,
-                        onActiveChange = {
-                            searchViewModel.onToggleSearch()
-                            coroutineScope.launch {
-                                bottomSheetState.expand()
-                            }
-                        },
-                        placeholder = { Text("Search by address, owner, PIN  or REID") },
-                        leadingIcon = { Icon(Icons.Filled.Search, "search") },
-                        modifier = Modifier.padding(it),
+                    Column {
+                        SearchBar(
+                            query = searchText,
+                            onQueryChange = searchViewModel::onSearchTextChange,
+                            onSearch = searchViewModel::onSearchTextChange,
+                            active = isSearching,
+                            onActiveChange = {
+                                if (!isSearching) {
+                                    searchViewModel.toggleSearching()
+                                    coroutineScope.launch {
+                                        bottomSheetState.expand()
+                                    }
+                                }
 
-                        colors = SearchBarDefaults.colors(
-                            containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                        )
-                    ) {
-                        SearchResultList(results = results, mapViewModel = mapViewModel)
+                            },
+                            placeholder = { Text("Search by address, owner, PIN  or REID") },
+                            leadingIcon = { Icon(Icons.Filled.Search, "search") },
+                            trailingIcon = {
+                                Icon(
+                                    Icons.Filled.Clear,
+                                    "clear search",
+                                    modifier = Modifier.clickable {
+                                        //searchViewModel.onToggleSearch()
+                                        searchViewModel.clearSearch()
+                                    })
+                            },
+
+                            modifier = Modifier
+                                .padding(it)
+                                .onFocusChanged {
+                                    coroutineScope.launch {
+                                        searchViewModel.toggleFocus(it.isFocused)
+                                    }
+
+                                },
+
+
+                            colors = SearchBarDefaults.colors(
+                                containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                            )
+                        ) {
+                            if (results.isNotEmpty()) {
+                                SearchResultList(results = results, mapViewModel = mapViewModel, searchViewModel = searchViewModel)
+                            }
+                        }
+                        if (results.isEmpty() || !isSearching) {
+                            SearchHistory(mapViewModel = mapViewModel)
+
+                        }
                     }
                 }
 
@@ -186,3 +251,53 @@ enum class Screens {
     DEED
 }
 
+@Composable
+fun SearchHistory(mapViewModel: MapViewModel) {
+    val application = LocalContext.current.applicationContext as Application
+    val sharedPreferences = application.getSharedPreferences("imaps_prefs", Context.MODE_PRIVATE)
+    var historyItems = remember{ mutableStateListOf<HistoryItem>()}
+    val coroutineScope = rememberCoroutineScope()
+
+    LaunchedEffect (Unit) {
+        if (sharedPreferences.getString("searchHistory", "") != "") {
+            val historyString =
+                sharedPreferences.getString("searchHistory", "").toString()
+            val items: MutableList<HistoryItem> =
+                Json.decodeFromString(historyString)
+            historyItems.addAll(items)
+        }
+    }
+    Column {
+        if (historyItems.isNotEmpty()) {
+            Text(
+                "Recent Searches",
+                color = MaterialTheme.colorScheme.onBackground,
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(10.dp)
+            )
+        }
+        LazyColumn {
+
+            items(historyItems.reversed()) { item ->
+                ClickableText(
+                    text = AnnotatedString(item.value),
+                    onClick = {
+                        coroutineScope.launch {
+                            mapViewModel.getCondo(
+                                item.field,
+                                item.value
+                            )
+                        }
+                    },
+                    style = TextStyle(color = MaterialTheme.colorScheme.onBackground),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(10.dp)
+                )
+            }
+        }
+    }
+
+}

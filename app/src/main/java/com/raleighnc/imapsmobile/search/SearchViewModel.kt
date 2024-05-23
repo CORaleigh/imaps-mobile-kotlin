@@ -17,6 +17,10 @@ class SearchViewModel : ViewModel() {
     private val _searchText = MutableStateFlow("")
     val searchText = _searchText.asStateFlow()
 
+    private val _isFocused = MutableStateFlow(false)
+    val isFocused = _isFocused.asStateFlow()
+
+
     private val _results = MutableStateFlow<List<SearchItem>>(emptyList())
     val results: StateFlow<List<SearchItem>> get() = _results
     fun onSearchTextChange(text: String) {
@@ -29,6 +33,14 @@ class SearchViewModel : ViewModel() {
             onSearchTextChange("")
 
         }
+    }
+
+    fun toggleSearching() {
+        _isSearching.value = !_isSearching.value
+    }
+
+    fun toggleFocus(focused: Boolean) {
+        _isFocused.value = focused
     }
 
     suspend fun getData(layerId: Int, field: String, value: String) {
@@ -63,6 +75,12 @@ class SearchViewModel : ViewModel() {
             _results.value = emptyList()
         }
 
+    }
+
+    fun clearSearch() {
+        _searchText.value = ""
+        _results.value = emptyList()
+        _isSearching.value = false
     }
 }
 

@@ -1,18 +1,23 @@
-package com.raleighnc.imapsmobile
+package com.raleighnc.imapsmobile.layers
 
 import android.app.Application
 import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Segment
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -36,6 +41,8 @@ import androidx.navigation.NavController
 import com.arcgismaps.mapping.ArcGISMap
 import com.arcgismaps.mapping.layers.GroupLayer
 import com.arcgismaps.mapping.layers.Layer
+import com.raleighnc.imapsmobile.HideableBottomSheetState
+import com.raleighnc.imapsmobile.MapViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
@@ -87,7 +94,7 @@ fun LayerListTopBar(
                     navController.popBackStack()
                 }) {
                     Icon(
-                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                        imageVector = Icons.Filled.KeyboardArrowLeft,
                         contentDescription = "Localized description"
                     )
                 }
@@ -112,7 +119,15 @@ fun LayerListTopBar(
                 // 6
                 DropdownMenuItem(
                     text = {
-                        Text("Expand Layers")
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Filled.Segment,
+                                contentDescription = "Expand Layers",
+
+                                )
+                            Spacer(modifier = Modifier.width(16.dp))
+                            Text("Expand Layers")
+                        }
                     },
                     onClick = {
                         expandAllLayers(mapViewModel.map, addExpandedLayer)
@@ -122,7 +137,15 @@ fun LayerListTopBar(
                 )
                 DropdownMenuItem(
                     text = {
-                        Text("Collapse Layers")
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Filled.List,
+                                contentDescription = "Collapse Layers",
+
+                                )
+                            Spacer(modifier = Modifier.width(16.dp))
+                            Text("Collapse Layers")
+                        }
                     },
                     onClick = {
                         expandedLayers.removeAll(expandedLayers)
@@ -132,15 +155,25 @@ fun LayerListTopBar(
                 )
                 DropdownMenuItem(
                     text = {
-                        Text("Reset Layers")
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Filled.Refresh,
+                                contentDescription = "Reset Layers",
+
+                                )
+                            Spacer(modifier = Modifier.width(16.dp))
+                            Text("Reset Layers")
+                        }
                     },
                     onClick = {
-                        val editor = sharedPreferences.edit()
-                        editor.remove("visibleLayers")
-                        editor.apply()
-                        mapViewModel.setLayerVisibility(mapViewModel.map)
-                        resetLayerList()
-                        menuExpanded = false
+                        coroutineScope.launch {
+                            val editor = sharedPreferences.edit()
+                            editor.remove("visibleLayers")
+                            editor.apply()
+                            mapViewModel.setLayerVisibility(mapViewModel.map)
+                            resetLayerList()
+                            menuExpanded = false
+                        }
                     })
 
             }

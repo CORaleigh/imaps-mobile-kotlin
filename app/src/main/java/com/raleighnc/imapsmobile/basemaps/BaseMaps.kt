@@ -1,6 +1,7 @@
 package com.raleighnc.imapsmobile.basemaps
 
 import android.annotation.SuppressLint
+import android.util.Log
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -164,11 +165,15 @@ fun BasemapList(
         horizontalArrangement = Arrangement.spacedBy(10.dp),
         modifier = Modifier.fillMaxSize()
     ) {
-        items(maps.value.filter {
-            selectedGroup.value != BasemapGroup.IMAGES || (inRaleigh.value || it.tags.contains(
-                "countywide"
-            ))
-        }) { item ->
+        val filteredMaps = if (maps.value != null) {
+            Log.i("test", maps.toString())
+            maps.value.filter { item ->
+                selectedGroup.value != BasemapGroup.IMAGES || (inRaleigh.value || item.tags.contains("countywide"))
+            }
+        } else {
+            emptyList()
+        }
+        items(filteredMaps) { item ->
             if (item.thumbnail != null) {
                 OutlinedCard(
                     modifier = Modifier

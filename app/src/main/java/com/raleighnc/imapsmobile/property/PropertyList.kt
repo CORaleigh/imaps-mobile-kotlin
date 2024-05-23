@@ -61,7 +61,7 @@ fun PropertyList(
                         .background(backgroundColor)
                         .clickable(onClick = {
                             coroutineScope.launch {
-                                mapViewModel.getCondo("PIN_NUM", feature.attributes["PIN_NUM"])
+                                mapViewModel.getCondo("REID", feature.attributes["REID"])
 
                             }
                             //mapViewModel.selectProperty(feature as ArcGISFeature)
@@ -75,6 +75,14 @@ fun PropertyList(
                         if (feature.attributes["PIN_EXT"]?.toString().orEmpty() != "000") {
                             pin_num += " ${feature.attributes["PIN_EXT"]?.toString().orEmpty()}"
                         }
+                        var address = feature.attributes["SITE_ADDRESS"]?.toString().orEmpty()
+                        var misc = feature.attributes["STMISC"]?.toString().orEmpty()
+                        if (misc == "1/2") {
+                            address.replaceFirst(" ", " 1/2 ")
+                        } else if (misc != "") {
+                            address += " $misc"
+                        }
+
                         Text(
                             text = feature.attributes["OWNER"]?.toString().orEmpty(),
                             style = MaterialTheme.typography.bodyLarge,
@@ -83,7 +91,7 @@ fun PropertyList(
                                 .fillMaxWidth()
                         )
                         Text(
-                            text = feature.attributes["SITE_ADDRESS"]?.toString().orEmpty(),
+                            text = address,
                             style = MaterialTheme.typography.bodyLarge,
                             textAlign = TextAlign.Center,
                             modifier = Modifier
